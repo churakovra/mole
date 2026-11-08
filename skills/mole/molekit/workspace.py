@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 import json
 import os
+import stat
 from pathlib import Path
 import tempfile
 
@@ -11,16 +12,44 @@ from molekit.errors import MoleError
 MAX_JSON_BYTES = 16 * 1024 * 1024
 
 
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def invalid_constant(value):
+    raise ValueError("Non-finite JSON number")
+
+
 def read_json(path):
     path = Path(path)
     if path.is_symlink():
         raise MoleError("UNSAFE_PATH", "JSON files must not be symlinks.")
     try:
-        with path.open("rb") as stream:
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        with os.fdopen(os.open(path, flags), "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise MoleError("UNSAFE_PATH", "JSON input must be a regular file.")
             raw = stream.read(MAX_JSON_BYTES + 1)
         if len(raw) > MAX_JSON_BYTES:
             raise MoleError("INVALID_JSON", "JSON exceeds size limit.")
-        return json.loads(raw)
+        value = json.loads(raw, object_pairs_hook=unique_object, parse_constant=invalid_constant)
+        pending = [(value, 0)]
+        count = 0
+        while pending:
+            item, depth = pending.pop()
+            count += 1
+            if depth > 64 or count > 200000:
+                raise ValueError("JSON complexity limit")
+            if isinstance(item, dict):
+                pending.extend((child, depth + 1) for child in item.values())
+            elif isinstance(item, list):
+                pending.extend((child, depth + 1) for child in item)
+        return value
     except (ValueError, RecursionError) as exc:
         raise MoleError("INVALID_JSON", "Malformed or excessively nested JSON.") from exc
 
@@ -55,7 +84,11 @@ def locked(directory, create=False):
     lock_path = directory / ".lock"
     if lock_path.is_symlink():
         raise MoleError("UNSAFE_PATH", "Workspace lock must not be a symlink.")
-    with lock_path.open("a+b") as stream:
+    descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+                         | getattr(os, "O_NONBLOCK", 0), 0o600)
+    with os.fdopen(descriptor, "r+b") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise MoleError("UNSAFE_PATH", "Lock must be a regular file.")
         if os.name == "nt":
             import msvcrt
             if stream.seek(0, 2) == 0:

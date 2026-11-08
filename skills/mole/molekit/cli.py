@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from molekit import __version__
 from molekit.errors import MoleError
@@ -26,7 +27,7 @@ def failure(code, message, action):
     emit({
         "protocolVersion": "1.0", "status": "FAILED", "nextAction": action,
         "ok": False,
-        "error": {"code": code, "message": message,
+        "error": {"code": code, "message": message[:2000],
                   "recoverable": True, "suggestedAction": action},
     })
 
@@ -93,14 +94,23 @@ def main(argv=None):
             failure("INTERNAL_ERROR", "Unexpected engine failure.", "Preserve the workspace and report this error.")
             return 10
 
+    payload = Path(__file__).resolve().parents[1]
+    required = ["SKILL.md", "LICENSE", "agents/openai.yaml", "scripts/mole.py",
+                "schemas/knowledge-model.v1.schema.json", "schemas/task.v1.schema.json",
+                "schemas/semantic-patch.v1.schema.json", "schemas/cli-envelope.v1.schema.json",
+                "assets/explorer/explorer.js", "assets/explorer/explorer.css", "assets/explorer/overrides.js"]
+    if not all((payload / name).is_file() for name in required):
+        failure("PAYLOAD_INCOMPLETE", "Installed skill payload is incomplete.", "Copy the entire skills/mole directory.")
+        return 3
     result = {
         "protocolVersion": "1.0", "status": "READY", "nextAction": "start",
         "ok": True,
         "engineVersion": __version__,
         "pythonVersion": ".".join(map(str, sys.version_info[:3])),
-        "checks": {"pythonSupported": True, "bundledEngine": True},
-        "capabilities": ["doctor"],
-        "limitations": ["Bootstrap only; repository analysis is not implemented."],
+        "checks": {"pythonSupported": True, "bundledEngine": True, "payloadComplete": True},
+        "capabilities": ["doctor", "start", "next", "inspect", "submit", "status", "finish", "export", "diff", "update"],
+        "limitations": ["Static analysis produces candidates; runtime behavior and semantic truth require evidence-backed review.",
+                        "Python-first; other languages have reduced coverage."],
     }
     if args.json:
         emit(result)

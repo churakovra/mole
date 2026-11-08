@@ -42,6 +42,10 @@ def start(repo, workspace, mode, scope):
     repo = Path(repo).resolve()
     if not repo.is_dir():
         raise MoleError("INVALID_REPOSITORY", "Repository must be an existing directory.")
+    from molekit.safety import confined_output
+    confined_output(repo, workspace)
+    if scope != "repository":
+        raise MoleError("UNSUPPORTED_SCOPE", "This version accepts --scope repository only; describe narrower goals in semantic tasks.")
     manifest = {"repo": str(repo), "mode": mode, "scope": scope,
                 "engineVersion": __version__}
     with locked(workspace, create=True) as directory:
@@ -159,6 +163,8 @@ def finish(state, directory, output, allow_partial, formats=None):
     ensure_fresh(state, directory)
     model = compose(state["scan"])
     output = Path(output).absolute()
+    from molekit.safety import confined_output
+    confined_output(state["manifest"]["repo"], output)
     if output.resolve() == Path(state["manifest"]["repo"]).resolve() or output.resolve() == directory.resolve():
         raise MoleError("UNSAFE_PATH", "Use a dedicated output subdirectory or external directory.")
     if any((Path(state["manifest"]["repo"]) / item["path"]).resolve().is_relative_to(output.resolve())

@@ -24,3 +24,4 @@ Skill creator quick validator could not run because PyYAML is unavailable.
 | 10 | feature/pr-10-field-overrides | Implemented; awaiting acceptance | Browser reload/storage/conflict/XSS tests; independent review findings repaired and verified; no shared-edit claim |
 | 11 | feature/pr-11-diagram-exports | Implemented; external acceptance pending | 55 tests pass with official XSD configured; XML round-trip/links/escaping pass; diagrams.net editor, Mermaid external parser and Confluence NOT_RUN |
 | 12 | feature/pr-12-incremental-updates | Implemented; awaiting acceptance | Seven focused update tests pass; review identity findings repaired; failure injection/retry, selective invalidation and manual preservation |
+| 13 | feature/pr-13-security-evals-portability | Implemented with release evidence gaps | 72 local tests pass; source/JSON/permission regressions, trusted mouse/shared navigation, installed full loop; reviewed multiline-secret fixes verified |

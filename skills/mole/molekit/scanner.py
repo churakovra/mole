@@ -12,6 +12,7 @@ import time
 from molekit.errors import MoleError
 from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json
+from molekit.safety import read_source
 
 PARSER_VERSION = "python-ast-v2-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
@@ -28,15 +29,43 @@ def identity(kind, value):
     return kind + "-" + sha(value.encode())[:24]
 
 
+SECRET_PATTERN = re.compile(r"-----BEGIN .*PRIVATE KEY|(?:password|secret|api[_-]?key|token)[\"']?\s*[:=]\s*(?:['\"][^'\"]{4,}|[^\s,;]{4,})|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[A-Z0-9]{16}|Bearer\s+[A-Za-z0-9_.-]{12,}|[a-z]+://[^\s/:]+:[^\s/@]+@", re.IGNORECASE)
+
+
 def sensitive(text):
-    return bool(re.search(r"-----BEGIN .*PRIVATE KEY|(?:password|secret|api[_-]?key|token)\s*[:=]\s*['\"][^'\"]{4,}",
-                          text, re.IGNORECASE))
+    return bool(SECRET_PATTERN.search(text))
 
 
 def redact(text):
     if sensitive(text):
         return "[sensitive source line suppressed]"
     return text
+
+
+def redacted_lines(content):
+    """Detect secrets before pagination so multiline values cannot lose context."""
+    content = "\n".join(content.splitlines())
+    lines = content.splitlines()
+    suppressed = set()
+    patterns = [SECRET_PATTERN,
+                re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)"),
+                re.compile(r"(?:password|secret|api[_-]?key|token)\s*=\s*(?P<quote>\"\"\"|''')[\s\S]*?(?P=quote)", re.I)]
+    for pattern in patterns:
+        for match in pattern.finditer(content):
+            start = content.count("\n", 0, match.start())
+            end = content.count("\n", 0, match.end())
+            suppressed.update(range(start, end + 1))
+    for index, line in enumerate(lines):
+        if re.search(r"(?:password|secret|api[_-]?key|token)[\"']?\s*:\s*[|>][-+]?\s*$", line, re.I):
+            suppressed.add(index)
+            indent = len(line) - len(line.lstrip())
+            for offset in range(index + 1, len(lines)):
+                following = lines[offset]
+                if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                    break
+                suppressed.add(offset)
+    return ["[sensitive source line suppressed]" if index in suppressed else line
+            for index, line in enumerate(lines)]
 
 
 def ignored(path, rules, is_dir=False):
@@ -64,22 +93,23 @@ def inventory(repo, workspace, excluded=()):
     workspace = Path(workspace).resolve()
     excluded = {Path(p).resolve() for p in excluded}
     records, limitations = [], []
+    total_bytes = 0
     started = time.monotonic()
 
     def visit(directory, inherited):
-        nonlocal records
+        nonlocal records, total_bytes
         if time.monotonic() - started > 30 or len(records) >= MAX_FILES:
             limitations.append({"path": ".", "reason": "inventory_budget_exceeded"})
             return
         rules = list(inherited)
         ignore_file = directory / ".gitignore"
         if ignore_file.is_file() and not ignore_file.is_symlink() and ignore_file.stat().st_size <= MAX_FILE_BYTES:
-            for line in ignore_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            for line in read_source(root, ignore_file).decode("utf-8", errors="replace").splitlines():
                 pattern = line.strip()
                 if pattern and not pattern.startswith("#"):
                     rules.append(("" if directory == root else directory.relative_to(root).as_posix(), pattern))
         for child in sorted(directory.iterdir()):
-            if time.monotonic() - started > 30 or len(records) >= MAX_FILES:
+            if time.monotonic() - started > 30 or len(records) >= MAX_FILES or total_bytes >= 64 * 1024 * 1024:
                 limitations.append({"path": ".", "reason": "inventory_budget_exceeded"})
                 return
             relative = child.relative_to(root).as_posix()
@@ -99,7 +129,12 @@ def inventory(repo, workspace, excluded=()):
                 if child.stat().st_size > MAX_FILE_BYTES:
                     limitations.append({"path": relative, "reason": "file_too_large"})
                     continue
-                raw = child.read_bytes()
+                try:
+                    raw = read_source(root, child, min(MAX_FILE_BYTES, 64 * 1024 * 1024 - total_bytes))
+                except MoleError:
+                    limitations.append({"path": relative, "reason": "source_unavailable_or_budget"})
+                    continue
+                total_bytes += len(raw)
                 if b"\x00" in raw:
                     continue
                 try:
@@ -186,6 +221,8 @@ def extract(content, path):
         extractor.visit(tree)
     except RecursionError:
         return {"symbols": [], "calls": [], "branches": [], "imports": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
+    if sum(len(items) for items in (extractor.symbols, extractor.calls, extractor.branches, extractor.imports)) > 10000:
+        return {"symbols": [], "calls": [], "branches": [], "imports": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
     return {"symbols": extractor.symbols, "calls": extractor.calls,
             "branches": extractor.branches, "imports": extractor.imports}
 
@@ -202,22 +239,31 @@ def scan(repo, workspace, excluded=()):
     reused = 0
     symbols = {}
 
-    def evidence(record, line, end, observation):
+    def evidence(record, line, end, observation, kind="source_code"):
         source_id = identity("src", record["path"] + ":" + str(line) + ":" + str(end) + ":" + record["hash"])
         ev_id = identity("ev", source_id + observation)
         if not any(s["id"] == source_id for s in model["sources"]):
             model["sources"].append({"id": source_id, "path": record["path"], "revision": revision,
-                                      "lineStart": line, "lineEnd": end, "kind": "source_code"})
+                                      "lineStart": line, "lineEnd": end, "kind": kind})
         if not any(e["id"] == ev_id for e in model["evidence"]):
             lines = record["content"].splitlines()[line - 1:end]
             model["evidence"].append({"id": ev_id, "sourceId": source_id, "observation": observation,
                                        "extractor": PARSER_VERSION, "excerptHash": sha("\n".join(lines).encode()),
-                                       "classification": "test_source" if "test" in record["path"] else "source_code"})
+                                       "classification": kind if kind != "source_code" else
+                                       "test_source" if "tests" in Path(record["path"]).parts or Path(record["path"]).name.startswith("test_") else "source_code"})
         return source_id, ev_id
 
     for record in records:
         path = record["path"]
         if not path.endswith(".py"):
+            suffix = Path(path).suffix.lower()
+            if suffix in {".md", ".txt", ".rst", ".json", ".toml", ".yaml", ".yml", ".js", ".ts", ".java", ".go", ".rs"}:
+                kind = "documentation" if suffix in {".md", ".txt", ".rst"} else "config" if suffix in {".json", ".toml", ".yaml", ".yml"} else "source_code"
+                _, ev = evidence(record, 1, max(1, len(record["content"].splitlines())), "Text input; agent interpretation required", kind)
+                model["operations"].append({"id": identity("document", path), "kind": "documented_input" if kind != "source_code" else "text_input",
+                                             "title": path, "evidenceIds": [ev]})
+                if kind == "source_code":
+                    limitations.append({"path": path, "reason": "reduced_coverage_no_ast_adapter"})
             continue
         previous = cache.get(path, {})
         cached = previous.get("facts") if isinstance(previous, dict) else None

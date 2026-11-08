@@ -37,7 +37,16 @@ async function run() {
   await call("Emulation.setDeviceMetricsOverride", {width:Number(width),height:844,deviceScaleFactor:1,mobile:false});
   await call("Page.navigate", {url:pathToFileURL(file).href});
   let html="";
+  let nativePerformed=false;
   for(let i=0;i<100;i++) {
+    if (!nativePerformed) {
+      const actions=await call("Runtime.evaluate",{expression:"window.__moleActions || null",returnByValue:true});
+      if(Array.isArray(actions.result.value)) {
+        for(const action of actions.result.value) await call("Input.dispatchMouseEvent",action);
+        await call("Runtime.evaluate",{expression:"window.__moleActionsDone=true"});
+        nativePerformed=true;
+      }
+    }
     const result=await call("Runtime.evaluate",{expression:"document.documentElement.outerHTML",returnByValue:true});
     html=result.result.value || "";
     if(html.includes('<pre id="test-results">')) break;

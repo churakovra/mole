@@ -5,7 +5,8 @@ from pathlib import Path
 
 from molekit.errors import MoleError
 from molekit.model import contract, validate_model
-from molekit.scanner import identity, inventory, redact, sha
+from molekit.scanner import identity, inventory, redact, redacted_lines, sha
+from molekit.safety import read_source
 
 
 def create_tasks(scan, mode):
@@ -28,6 +29,14 @@ def create_tasks(scan, mode):
                 "responseSchema": "semantic-patch.v1"}
         contract(task, "task")
         tasks.append(task)
+    for operation in model["operations"]:
+        if operation["kind"] in {"documented_input", "text_input"}:
+            task = {"id": identity("task", operation["id"]), "kind": "document_review", "priority": "normal",
+                    "question": "Explain intended workflows and unknowns from " + operation["title"] + "; do not infer verified runtime behavior.",
+                    "evidenceIds": operation["evidenceIds"], "baseRevision": model["revision"],
+                    "status": "pending", "responseSchema": "semantic-patch.v1"}
+            contract(task, "task")
+            tasks.append(task)
     tasks.sort(key=lambda task: (task["priority"] != "critical", task["id"]))
     if len(tasks) > budget:
         scan["limitations"].append({"path": ".", "reason": "semantic_task_budget_exceeded"})
@@ -62,7 +71,11 @@ def inspect(state, task, budget, cursor):
         path = repo / source["path"]
         if path.is_symlink() or not path.resolve().is_relative_to(repo):
             raise MoleError("UNSAFE_PATH", "Evidence path escaped the repository.")
-        lines = path.read_text(encoding="utf-8").splitlines()[source["lineStart"] - 1:source["lineEnd"]]
+        content = read_source(repo, path).decode("utf-8")
+        lines = content.splitlines()[source["lineStart"] - 1:source["lineEnd"]]
+        if sha("\n".join(lines).encode()) != evidence["excerptHash"]:
+            raise MoleError("TASK_STALE", "Evidence changed while inspecting.", 5)
+        lines = redacted_lines(content)[source["lineStart"] - 1:source["lineEnd"]]
         if line_offset > len(lines):
             raise MoleError("INVALID_CURSOR", "Line offset exceeds source span.")
         for offset in range(line_offset, len(lines)):

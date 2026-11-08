@@ -157,3 +157,17 @@ A previous model is saved under workspace history before the new checkpoint.
 Run `finish`/`export` afterwards; change-report.md records invalidations and reuse.
 Removed process files become retired notices while retaining manual notes.
 No automatic deletion, merge, commit, or publication occurs.
+
+### Security, evaluation and portability (PR-13)
+
+Repository reads use bounded, symlink-resistant paths; contextual secret
+suppression happens before inspection pagination. JSON complexity, duplicate
+keys, non-finite values, output escapes and permission failures are checked.
+Read [the security model](docs/security-model.md) for boundaries and limitations.
+Document-only sources receive agent-review tasks; unsupported source languages
+are explicitly reduced coverage rather than silently treated as Python.
+Run `python3 tools/evaluate.py --output /tmp/mole-evaluation.json` for the actual
+fixture/cache checks. See [evaluation scope](docs/evaluation.md) and the recorded
+[results](docs/evaluation-results.json). Multi-model/baseline quality comparisons,
+CI OS/runtime matrix, Firefox/WebKit/touch, and external integration acceptance
+remain NOT_RUN. These gaps block a final 1.0.0 readiness claim.

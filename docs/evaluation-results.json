@@ -1,0 +1,62 @@
+{
+  "environment": {
+    "python": "3.15.2",
+    "platform": "Darwin"
+  },
+  "fixtures": [
+    {
+      "fixture": "fastapi-db-events",
+      "goldenPatterns": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 554,
+      "taskPayloadBytes": 1030,
+      "firstScanSeconds": 0.0017493750019639265,
+      "cachedScanSeconds": 0.0013918750009906944,
+      "cache": {
+        "files": 1,
+        "parsed": 0,
+        "reused": 1
+      },
+      "staticEdgesOnly": true
+    },
+    {
+      "fixture": "django-transactions",
+      "goldenPatterns": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 272,
+      "taskPayloadBytes": 504,
+      "firstScanSeconds": 0.001088750002963934,
+      "cachedScanSeconds": 0.0008472090012219269,
+      "cache": {
+        "files": 1,
+        "parsed": 0,
+        "reused": 1
+      },
+      "staticEdgesOnly": true
+    },
+    {
+      "fixture": "consumer-retry-idempotency",
+      "goldenPatterns": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 303,
+      "taskPayloadBytes": 719,
+      "firstScanSeconds": 0.0011742500028049108,
+      "cachedScanSeconds": 0.0009783750028873328,
+      "cache": {
+        "files": 1,
+        "parsed": 0,
+        "reused": 1
+      },
+      "staticEdgesOnly": true
+    }
+  ],
+  "tokens": "unavailable",
+  "llmLedBaseline": "NOT_RUN",
+  "multiModelEval": "NOT_RUN",
+  "semanticBlindReview": "NOT_RUN",
+  "limitations": [
+    "Measures parser/cache and fixture pattern checks only.",
+    "Task payload bytes are not token usage or demonstrated savings.",
+    "No light/medium/strong LLM endpoints or telemetry configured."
+  ]
+}

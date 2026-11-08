@@ -47,6 +47,21 @@ def compose(scan):
             model["businessSteps"].append({"id": identity("business", scenario_id + claim["id"]),
                 "what": operation["title"], "why": claim["statement"],
                 "operationIds": [operation["id"]], "claimIds": [claim["id"]]})
+    for operation in model["operations"]:
+        if operation["kind"] not in {"documented_input", "text_input"}:
+            continue
+        sid = identity("scenario", operation["id"])
+        vid = identity("view", sid)
+        claims = [c["id"] for c in model["claims"] if set(c["evidenceIds"]) & set(operation["evidenceIds"])]
+        model["scenarios"].append({"id": sid, "title": "Document-assisted review: " + operation["title"],
+            "trigger": "Provided text; intended behavior requires agent interpretation, not AST/runtime proof",
+            "operationIds": [operation["id"]], "claimIds": claims, "outcomes": ["Document evidence boundary"],
+            "unknowns": ["No source-code call graph or runtime guarantees are derived from this text."]})
+        model["diagramViews"].append({"id": vid, "title": operation["title"], "scenarioIds": [sid],
+            "nodes": [{"id": operation["id"], "label": operation["title"]}], "edgeIds": [], "childRefs": []})
+        overview["scenarioIds"].append(sid)
+        overview["nodes"].append({"id": operation["id"], "label": operation["title"]})
+        overview["childRefs"].append(vid)
     if overview["nodes"]:
         model["diagramViews"].insert(0, overview)
     for index, limitation in enumerate(scan["limitations"]):
