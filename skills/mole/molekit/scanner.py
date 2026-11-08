@@ -13,7 +13,7 @@ from molekit.errors import MoleError
 from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json
 
-PARSER_VERSION = "python-ast-v1-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v2-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
@@ -157,9 +157,9 @@ class Extractor(ast.NodeVisitor):
         self.owner.pop()
 
     def visit_Call(self, node):
-        if self.owner:
-            self.calls.append({"owner": ".".join(self.owner), "target": called_name(node.func),
-                               "line": node.lineno, "end": node.end_lineno, "column": node.col_offset})
+        self.calls.append({"owner": ".".join(self.owner) if self.owner else "<module>",
+                           "target": called_name(node.func), "line": node.lineno,
+                           "end": node.end_lineno, "column": node.col_offset})
         self.generic_visit(node)
 
     def generic_visit(self, node):
@@ -267,6 +267,8 @@ def scan(repo, workspace):
                     "evidenceIds": [ev], "condition": "Static call site; runtime reachability unproven"})
             else:
                 unresolved.append({"evidenceId": ev, "target": call["target"], "owner": source})
+        for branch in facts[path]["facts"]["branches"]:
+            evidence(record, branch["line"], branch["end"], branch["kind"] + " control boundary")
     atomic_json(cache_path, facts)
     validate_model(model)
     index = [{"path": r["path"], "hash": r["hash"]} for r in records]

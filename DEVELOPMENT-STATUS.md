@@ -16,3 +16,4 @@ Skill creator quick validator could not run because PyYAML is unavailable.
 | 02 | feature/pr-02-workspace-protocol | Implemented; awaiting acceptance | 15 tests pass; independent review finding repaired and re-reviewed |
 | 03 | feature/pr-03-knowledge-model | Implemented; awaiting acceptance | 21 tests pass; independent review findings repaired and verified |
 | 04 | feature/pr-04-python-scanner | Implemented; awaiting acceptance | 27 tests pass; independent review fixes verified; installed scan denies network/process creation |
+| 05 | feature/pr-05-framework-traces | Implemented; awaiting combined review/acceptance | 30 tests pass; FastAPI/Django/consumer fixtures and bounded traces |

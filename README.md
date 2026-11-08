@@ -69,3 +69,13 @@ cases are not supported. UTF-8 text is the current source encoding contract.
 A cache keyed by content hash and host parser version avoids reparsing unchanged
 Python files. The source revision is a deterministic inventory hash, not a Git
 commit or proof of runtime behavior.
+
+### Framework candidates (PR-05)
+
+Adapters activate only when imports detect FastAPI/Starlette, Django,
+SQLAlchemy, asyncio, aio-pika, or aiokafka. They locate route decorators,
+transaction/read/write patterns, async boundaries, publish/consume/ack patterns,
+and branch boundaries. These are name-based candidates with source evidence,
+not proof of dispatch, ordering, transaction scope, retries, or delivery guarantees.
+Bounded forward/backward traces terminate cycles and report evidence boundaries.
+Dynamic DI and broker configuration still require agent review.

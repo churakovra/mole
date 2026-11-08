@@ -69,6 +69,8 @@ def advance(state, directory):
     transition(state, "SCANNING")
     atomic_json(directory / "state.json", state)
     result = scan(state["manifest"]["repo"], directory)
+    from molekit.adapters import enrich
+    enrich(result)
     transition(state, "EXTRACTING")
     state["scan"] = result
     state["revision"] = result["model"]["revision"]
