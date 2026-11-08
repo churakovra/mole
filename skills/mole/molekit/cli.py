@@ -37,7 +37,7 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     doctor = commands.add_parser("doctor", help="Check the bundled Python runtime.")
     doctor.add_argument("--json", action="store_true", help="Emit machine-readable diagnostics.")
-    for name in ("start", "next", "inspect", "submit", "status", "finish"):
+    for name in ("start", "next", "inspect", "submit", "status", "finish", "export", "diff", "update"):
         command = commands.add_parser(name, help=name + " a persistent analysis session.")
         command.add_argument("--workspace", required=True)
         command.add_argument("--json", action="store_true")
@@ -51,7 +51,7 @@ def main(argv=None):
             command.add_argument("--cursor", default="0:0")
         if name == "submit":
             command.add_argument("--input", required=True)
-        if name == "finish":
+        if name in ("finish", "export"):
             command.add_argument("--output", required=True)
             command.add_argument("--allow-partial", action="store_true")
             command.add_argument("--format", dest="formats", action="append", choices=("markdown", "html", "drawio", "mermaid"))

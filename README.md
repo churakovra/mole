@@ -144,3 +144,16 @@ run locally. Editor save-round-trip, Mermaid external-parser and Confluence
 Cloud/app acceptance remain NOT_RUN; these are not certified integrations.
 For optional development XSD checks, set MOLE_DRAWIO_XSD to a local official
 mxfile.xsd and provide xmllint. The runtime never downloads a schema.
+
+### Incremental regeneration (PR-12)
+
+`diff --workspace PATH` reports added/removed/changed files without changing
+knowledge. `update --workspace PATH` rescans changed inputs, reuses unchanged
+parser facts and evidence-valid claims, and reopens affected semantic tasks.
+Old patches are rejected after revision changes. Exact, unique file renames
+retain established symbol/operation IDs; ambiguous matches are reported, never
+fuzzily guessed. New declarations reusing vacated names receive distinct IDs.
+A previous model is saved under workspace history before the new checkpoint.
+Run `finish`/`export` afterwards; change-report.md records invalidations and reuse.
+Removed process files become retired notices while retaining manual notes.
+No automatic deletion, merge, commit, or publication occurs.

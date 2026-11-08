@@ -86,6 +86,12 @@ def operate(command, workspace, **options):
         state = load(directory)
         if command == "status":
             return summary(state)
+        if command in ("diff", "update"):
+            from molekit.update import changes, refresh
+            if command == "diff":
+                return {**summary(state), "changes": changes(state, directory)}
+            state, report = refresh(state, directory)
+            return {**summary(state), "changes": report}
         if command == "next":
             if state["status"] in ("NEW", "SCANNING", "FAILED"):
                 if state["status"] == "SCANNING":
@@ -126,6 +132,8 @@ def operate(command, workspace, **options):
                 transition(state, "NEEDS_ANALYSIS")
             if state["status"] != "NEEDS_ANALYSIS" or patch.get("baseRevision") != state["revision"]:
                 raise MoleError("TASK_STALE", "Patch does not match active revision.", 5)
+            if task["status"] != "pending":
+                raise MoleError("TASK_CONFLICT", "Task has already been completed.", 5)
             accept_patch(state, task, patch)
             state["submissions"][task_id] = fingerprint
             transition(state, "VALIDATING")
@@ -133,7 +141,7 @@ def operate(command, workspace, **options):
                 transition(state, "NEEDS_ANALYSIS")
             atomic_json(directory / "state.json", state)
             return summary(state)
-        if command == "finish":
+        if command in ("finish", "export"):
             return finish(state, directory, options["output"], options.get("allow_partial", False), options.get("formats"))
         raise MoleError("INVALID_REQUEST", "Unknown operation.")
 
@@ -163,6 +171,14 @@ def finish(state, directory, output, allow_partial, formats=None):
                     for key, value in state["pendingExport"]["bases"].items()}
     formats = formats or ["markdown", "html", "drawio"]
     generated = documents(model, state["manifest"]["repo"], output, partial)
+    if "changeReport" in state:
+        from molekit.markdown import text
+        report = state["changeReport"]
+        lines = ["# Change report", "", "Snapshot: `" + state["revision"] + "`", ""]
+        for key in ("added", "removed", "changed", "invalidatedClaims", "ambiguousRenames"):
+            lines.extend(["## " + key, "", *["- " + text(item) for item in report[key]], ""])
+        lines.extend(["Reused claims: " + str(report["reusedClaims"]), "", "Renames: " + text(report["renames"]), ""])
+        generated["change-report.md"] = "\n".join(lines)
     if "html" in formats:
         from molekit.html import render
         generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(output.resolve()))[:24])
@@ -174,6 +190,9 @@ def finish(state, directory, output, allow_partial, formats=None):
     if "mermaid" in formats and model["diagramViews"]:
         from molekit.mermaid import render as mermaid
         generated["workflows.mmd"] = mermaid(model, partial)
+    for relative in previous:
+        if relative.startswith("processes/") and relative.endswith(".md") and relative not in generated:
+            generated[relative] = "# Retired process\n\nThis generated trace is no longer present at snapshot `" + state["revision"] + "`. Manual notes below are retained.\n"
     writes, bases = plan_writes(output, generated, previous)
     # Mark the journal before touching output. Interrupted exports can resume
     # from generated content without mistaking it for an authored edit.

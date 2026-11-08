@@ -190,8 +190,8 @@ def extract(content, path):
             "branches": extractor.branches, "imports": extractor.imports}
 
 
-def scan(repo, workspace):
-    records, limitations = inventory(repo, workspace)
+def scan(repo, workspace, excluded=()):
+    records, limitations = inventory(repo, workspace, excluded)
     cache_path = Path(workspace) / "scan-cache.json"
     cache = read_json(cache_path) if cache_path.exists() else {}
     if not isinstance(cache, dict):

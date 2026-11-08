@@ -18,7 +18,8 @@ def compose(scan):
     for symbol in model["symbols"]:
         if symbol["kind"] == "class":
             continue
-        operation = operations[identity("op", symbol["qualifiedName"])]
+        operation = next(op for op in model["operations"] if op["title"] == symbol["qualifiedName"]
+                         and op["kind"] == symbol["kind"])
         traced = trace(model, symbol["id"])
         node_ids = set(traced["nodeIds"]) | {operation["id"]}
         related_ops = [operation["id"]] + [oid for oid in operations if oid in node_ids and oid != operation["id"]]

@@ -103,4 +103,5 @@ def accept_patch(state, task, patch):
     candidate = {**state["scan"]["model"], "claims": state["scan"]["model"]["claims"] + patch["claims"]}
     validate_model(candidate)
     state["scan"]["model"] = candidate
+    state.setdefault("taskClaims", {})[task["id"]] = [claim["id"] for claim in patch["claims"]]
     task["status"] = "completed"
