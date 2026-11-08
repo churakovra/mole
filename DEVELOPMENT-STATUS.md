@@ -1,27 +1,50 @@
-# Development status
+# MOLE development status
 
-Local branches are stacked: each PR branch starts from the previous PR's commit.
-The user authorized local commits and deferred combined review and merge until
-implementation is finished. No push, merge, release tag, or publication is authorized.
+All feature checkpoints are local and stacked: each branch starts from the prior
+feature's commit. The user authorized local commits and deferred combined review
+and merge. Nothing has been pushed, merged, tagged, installed globally or published.
 
-| PR | Branch | State | Evidence |
-| --- | --- | --- | --- |
-| 01 | feature/pr-01-skill-bootstrap | Implemented; awaiting acceptance | 5 tests pass; independent review: no findings |
+Current branch: `feature/pr-14-release-preparation`.
+Current candidate: `1.0.0rc1`. All checkpoints await user acceptance.
+The repository had no commits before PR-01; no populated main branch was created.
 
-Current scope: PR-02, persistent workspace and CLI protocol.
+| PR | Local branch | Checkpoint |
+| --- | --- | --- |
+| 01 | feature/pr-01-skill-bootstrap | e73e85b |
+| 02 | feature/pr-02-workspace-protocol | 291f56a |
+| 03 | feature/pr-03-knowledge-model | 29a7686 |
+| 04 | feature/pr-04-python-scanner | be2593f |
+| 05 | feature/pr-05-framework-traces | b5da805 |
+| 06 | feature/pr-06-agent-protocol | 07120f6 |
+| 07 | feature/pr-07-markdown-knowledge | a27a09a |
+| 08 | feature/pr-08-offline-explorer | dc92a72 |
+| 09 | feature/pr-09-layout-accessibility | 894b4f1 |
+| 10 | feature/pr-10-field-overrides | 1a9c3dd |
+| 11 | feature/pr-11-diagram-exports | 03dad92 |
+| 12 | feature/pr-12-incremental-updates | 8378dfb |
+| 13 | feature/pr-13-security-evals-portability | c3df833 |
+| 14 | feature/pr-14-release-preparation | HEAD after final local commit |
 
-External checks not run: CI OS/Python matrix, Confluence, agent model evals.
-Skill creator quick validator could not run because PyYAML is unavailable.
+PR-14 also closes candidate-contract audit gaps: bounded authored scenarios,
+business mappings/glossary, safe narrow path scopes, matching JSON read/write
+limits, and slash-aware ignore patterns. The optional semantic-patch additions
+remain backward-compatible with claims-only v1 patches.
 
-| 02 | feature/pr-02-workspace-protocol | Implemented; awaiting acceptance | 15 tests pass; independent review finding repaired and re-reviewed |
-| 03 | feature/pr-03-knowledge-model | Implemented; awaiting acceptance | 21 tests pass; independent review findings repaired and verified |
-| 04 | feature/pr-04-python-scanner | Implemented; awaiting acceptance | 27 tests pass; independent review fixes verified; installed scan denies network/process creation |
-| 05 | feature/pr-05-framework-traces | Implemented; awaiting combined review/acceptance | 30 tests pass; FastAPI/Django/consumer fixtures and bounded traces |
-| 06 | feature/pr-06-agent-protocol | Implemented; awaiting acceptance | 36 tests pass; semantic loop, pagination, stale evidence and duplicates; review findings repaired |
-| 07 | feature/pr-07-markdown-knowledge | Implemented; awaiting acceptance | 42 tests pass; independent review findings repaired/verified; manual preservation and interrupted exports |
-| 08 | feature/pr-08-offline-explorer | Implemented; awaiting combined review/acceptance | 44 tests; Chrome tests pass against three SKMs via file://; sandboxed Chrome required an elevated test run |
-| 09 | feature/pr-09-layout-accessibility | Implemented; awaiting combined review/acceptance | 46 tests pass; exact five-width Chrome matrix; screenshots visually inspected; deterministic geometry and local overflow |
-| 10 | feature/pr-10-field-overrides | Implemented; awaiting acceptance | Browser reload/storage/conflict/XSS tests; independent review findings repaired and verified; no shared-edit claim |
-| 11 | feature/pr-11-diagram-exports | Implemented; external acceptance pending | 55 tests pass with official XSD configured; XML round-trip/links/escaping pass; diagrams.net editor, Mermaid external parser and Confluence NOT_RUN |
-| 12 | feature/pr-12-incremental-updates | Implemented; awaiting acceptance | Seven focused update tests pass; review identity findings repaired; failure injection/retry, selective invalidation and manual preservation |
-| 13 | feature/pr-13-security-evals-portability | Implemented with release evidence gaps | 72 local tests pass; source/JSON/permission regressions, trusted mouse/shared navigation, installed full loop; reviewed multiline-secret fixes verified |
+Independent targeted reviews covered bootstrap, persistence, model provenance,
+scanner/cache, semantic protocol, authored-note preservation, browser overrides,
+incremental identities, contextual secret suppression and authored knowledge.
+Verified findings were repaired and rechecked. Combined product/release review
+is still pending; targeted reviews are not acceptance of the entire product.
+
+Fresh verification and remaining gaps are recorded in
+[release readiness](docs/release-readiness.md). Evaluation data is in
+[the checked-in report](docs/evaluation-results.json).
+
+To review the root bootstrap: `git show --stat e73e85b`.
+For later increments: `git diff <prior-branch>..<feature-branch>`.
+For all later work together:
+`git diff feature/pr-01-skill-bootstrap..feature/pr-14-release-preparation`.
+Review the root bootstrap in addition to that combined diff.
+
+Next action: combined user review, outstanding acceptance checks, then an
+explicit decision on the initial main baseline and merge/release sequence.

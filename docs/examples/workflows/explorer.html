@@ -1,0 +1,364 @@
+<!-- mole:generated:start id=explorer.html -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>MOLE · Workflow explorer</title><style>:root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #183c31; background: #f7f6f0; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { display: flex; align-items: baseline; gap: 1.4rem; padding: 1rem 1.5rem; background: #183c31; color: #faf8ed; }
+header strong { font-size: 1.4rem; letter-spacing: .18em; }
+header span { font-size: .85rem; }
+#warning { margin: 0; padding: .6rem 1.5rem; background: #f4e6bc; color: #483710; font-size: .85rem; }
+main { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 1rem; padding: 1rem; }
+aside { min-width: 0; padding: .7rem; border-right: 1px solid #c8d1c5; }
+label { display: block; font-size: .85rem; }
+input { width: 100%; padding: .55rem; border: 1px solid #849887; border-radius: .3rem; background: #fff; }
+button { cursor: pointer; font: inherit; border: 1px solid #849887; border-radius: .3rem; background: #fff; color: #183c31; padding: .35rem .7rem; }
+button:hover { background: #e4ecd9; }
+button:disabled { cursor: default; opacity: .45; }
+:focus-visible { outline: 3px solid #a36600; outline-offset: 3px; }
+nav ul { list-style: none; padding-left: .8rem; }
+nav button { display: block; margin: .3rem 0; text-align: left; width: 100%; overflow-wrap: anywhere; }
+nav button[aria-current="page"] { background: #dce8cf; border-color: #183c31; }
+.work { min-width: 0; }
+.toolbar { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+h1 { flex: 1; font-size: 1.15rem; margin: 0; overflow-wrap: anywhere; }
+#viewport { height: 55vh; min-height: 18rem; overflow: auto; border: 1px solid #b6c4b3; border-radius: .5rem; background: #fff; position: relative; }
+svg { display: block; }
+#viewport { touch-action: pan-x pan-y; overscroll-behavior: contain; }
+#viewport.dragging { cursor: grabbing; user-select: none; }
+.node rect { fill: #f2f6ec; stroke: #607c63; stroke-width: 1.5; }
+.node.selected rect { fill: #ffe7ae; stroke: #835a00; stroke-width: 3; }
+.node text { fill: #183c31; font-size: 13px; }
+.node { cursor: pointer; }
+.edge path { fill: none; stroke: #607c63; stroke-width: 2; }
+.edge .hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
+.edge.selected path { stroke: #a36600; stroke-width: 3; }
+.edge text { font-size: 11px; fill: #394e3d; paint-order: stroke; stroke: white; stroke-width: 4px; stroke-linejoin: round; }
+#details { background: #fff; margin-top: 1rem; padding: 1.2rem; border: 1px solid #c8d1c5; border-radius: .5rem; overflow-wrap: anywhere; }
+#details h2 { margin-top: 0; font-size: 1.1rem; }
+footer { padding: 1rem; font-size: .8rem; color: #4f6254; }
+@media (max-width: 768px) { main { grid-template-columns: minmax(0, 1fr); } aside { border-right: none; } nav { max-height: 10rem; overflow: auto; } header span { display: none; } .toolbar { flex-wrap: wrap; } h1 { min-width: 45%; } }
+@media (max-width: 600px) { .toolbar h1 { order: -1; flex-basis: 100%; } }
+dialog { max-width: min(90vw, 36rem); border: 1px solid #607c63; border-radius: .5rem; padding: 1.2rem; }
+dialog::backdrop { background: #10251b66; }
+dialog textarea { display: block; width: 100%; min-height: 9rem; margin: .7rem 0; font: inherit; padding: .5rem; }
+dialog button { margin-right: .5rem; }
+</style></head>
+<body><header><strong>MOLE</strong><span>Follow the code. Find the why.</span></header>
+<p id="warning" role="status">Static candidates; runtime behavior is not verified.</p>
+<main><aside><label for="search">Find a process</label><input id="search" type="search" placeholder="Search views">
+<nav id="tree" aria-label="Process navigation"></nav></aside>
+<section class="work"><div class="toolbar"><button id="back" type="button">Back</button><h1 id="title">Workflow explorer</h1>
+<button id="zoom-out" aria-label="Zoom out" type="button">−</button><output id="zoom-label" aria-live="polite">100%</output>
+<button id="zoom-in" aria-label="Zoom in" type="button">+</button><button id="fit" type="button" hidden>Fit</button></div>
+<div id="viewport" tabindex="0" aria-label="Scrollable workflow diagram"><svg id="diagram" role="group" aria-label="Workflow diagram"></svg></div>
+<section id="details" tabindex="-1" aria-label="Selection details"><h2>Select a node or connector</h2><p>Double-click a process to open its details. Use Back to return to its parent.</p></section>
+</section></main><footer>Local artifact · edits, when available, remain in this browser</footer>
+<script id="mole-model" type="application/json">{"businessSteps": [{"id": "business-0ac10ecd7a180259c57dde19", "what": "app.create_order", "why": "The source declares this callable. Its business purpose and runtime execution are not established by this fixture.", "operationIds": ["op-9ee8084d6f275c9356902a56"], "claimIds": ["claim-task-20760a5900e3a2cc5ab7b77d"]}, {"id": "business-b666c9050906f845b3f21420", "what": "app.deliver", "why": "The source declares this callable. Its business purpose and runtime execution are not established by this fixture.", "operationIds": ["op-5a2d7d0d5f2a8b06f3a9f8c1"], "claimIds": ["claim-task-4e0e0fbd93ae5b80d31f0f28"]}], "claims": [{"evidenceIds": ["ev-7a88dcae7a86ba287aafc27c", "ev-4d6ec685a0bb20386ce6f78d", "ev-864bcdbcdbb8bca96d1a44f6", "ev-0baebf3be555d17b9e5ec278", "ev-4862f3f66a50ceb9b6fc76d2", "ev-059827f9ad9cedc3a594f4dd", "ev-afd7e3664a6e6ade5e0d2ef2"], "id": "claim-task-20760a5900e3a2cc5ab7b77d", "limitations": ["Static fixture analysis; no target code was executed."], "statement": "The source declares this callable. Its business purpose and runtime execution are not established by this fixture.", "status": "source_observed"}, {"evidenceIds": ["ev-9d734ba2f43f665b76071098", "ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "claim-task-4e0e0fbd93ae5b80d31f0f28", "limitations": ["Static fixture analysis; no target code was executed."], "statement": "The source declares this callable. Its business purpose and runtime execution are not established by this fixture.", "status": "source_observed"}], "diagramViews": [{"id": "view-overview", "title": "System overview", "scenarioIds": ["scenario-20760a5900e3a2cc5ab7b77d", "scenario-4e0e0fbd93ae5b80d31f0f28", "semantic-callable-review"], "nodes": [{"id": "op-9ee8084d6f275c9356902a56", "label": "app.create_order"}, {"id": "op-5a2d7d0d5f2a8b06f3a9f8c1", "label": "app.deliver"}, {"id": "scenario-summary-08c0fcfebbc3b468c74792c9", "label": "Callable review: app.create_order"}], "edgeIds": [], "childRefs": ["view-1b19da0e7506894547effec2", "view-521179d22a564d2188f4e9f4", "view-08c0fcfebbc3b468c74792c9"]}, {"id": "view-1b19da0e7506894547effec2", "title": "app.create_order", "scenarioIds": ["scenario-20760a5900e3a2cc5ab7b77d"], "nodes": [{"id": "event-02064ef929391d7003d9b333", "label": "tasks.add_task candidate"}, {"id": "event-13b3ffd2cfe97b579b507398", "label": "Try boundary"}, {"id": "event-24012ec7d9984642527e4f78", "label": "session.add candidate"}, {"id": "event-76c3ae56d0d0eac5e11dd9ca", "label": "session.commit candidate"}, {"id": "event-8437d1648f2bda6382108102", "label": "Async declaration create_order"}, {"id": "event-d6f371983aab0d012155a85b", "label": "app.post decorator on create_order"}, {"id": "event-fb5dcf698f56cebc95d4d412", "label": "session.rollback candidate"}, {"id": "event-fcc71187db43213db7a63ad1", "label": "Raise boundary"}, {"id": "op-9ee8084d6f275c9356902a56", "label": "app.create_order"}, {"id": "symbol-9ee8084d6f275c9356902a56", "label": "app.create_order"}], "edgeIds": ["edge-2c0fadb6845fbb2eadf95a49", "edge-c3a1595f1da6e6ada0b5669a", "edge-0067724255179740f0299e8e", "edge-340da39d44206f599037ac4b", "edge-864f3f5a0853092965b78a44", "edge-8d47b36748bdef39f8d91d7e", "edge-0962094b89f706bd7c242237", "edge-9120ba1105cc059b101f57a5"], "childRefs": []}, {"id": "view-521179d22a564d2188f4e9f4", "title": "app.deliver", "scenarioIds": ["scenario-4e0e0fbd93ae5b80d31f0f28"], "nodes": [{"id": "event-02ee436bde1b71b73f0d9aaf", "label": "asyncio.wait_for candidate"}, {"id": "event-b8f3a13297d597adadbaaaab", "label": "Async declaration deliver"}, {"id": "event-e8ed5ec7b18fa205a3646a78", "label": "Await boundary"}, {"id": "event-ee26772bc8a5761b39c6850e", "label": "exchange.publish candidate"}, {"id": "op-5a2d7d0d5f2a8b06f3a9f8c1", "label": "app.deliver"}, {"id": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "label": "app.deliver"}], "edgeIds": ["edge-48eb2c230b08783657679d24", "edge-888bdd48e5bda104287c3bad", "edge-5db24d172518ab821c012e37", "edge-c7014fe4a3196e24dd34736c"], "childRefs": []}, {"id": "view-08c0fcfebbc3b468c74792c9", "title": "Callable review: app.create_order", "scenarioIds": ["semantic-callable-review"], "nodes": [{"id": "scenario-summary-08c0fcfebbc3b468c74792c9", "label": "Callable review: app.create_order"}, {"id": "op-9ee8084d6f275c9356902a56", "label": "app.create_order"}], "edgeIds": [], "childRefs": []}], "evidence": [{"classification": "source_code", "excerptHash": "b891e2ca7d9c1b9ab920d6a0732d27bd8431b9c0aa9ce7ba741f6e7dec83ce0a", "extractor": "python-ast-v3-3.15", "id": "ev-7a88dcae7a86ba287aafc27c", "observation": "Declared async_function app.create_order", "sourceId": "src-57ef263bc15d7ba94804d5a5"}, {"classification": "source_code", "excerptHash": "4c8b8430f633ea538942d8e6cc04bd7756418ea2189cdcec267bfa5549eef4b0", "extractor": "python-ast-v3-3.15", "id": "ev-9d734ba2f43f665b76071098", "observation": "Declared async_function app.deliver", "sourceId": "src-1a000b80a311b20cdba5841b"}, {"classification": "source_code", "excerptHash": "27cafac75b3a8ec29581d35e69cbb7e4cbc6eb8c802cc60aa67b4cb8e2abc3f0", "extractor": "python-ast-v3-3.15", "id": "ev-fd88427eb6093e4da277107d", "observation": "Possible call to FastAPI", "sourceId": "src-a2cc06c162d672a071c72ec0"}, {"classification": "source_code", "excerptHash": "e94738f83b6730edd312fb5e61187a80d659b0c18beacc8da98e383d8fe55336", "extractor": "python-ast-v3-3.15", "id": "ev-4d6ec685a0bb20386ce6f78d", "observation": "Possible call to session.add", "sourceId": "src-5f660923a7cab2fd0692eb72"}, {"classification": "source_code", "excerptHash": "d7353fc6c8a787236e28430d3edba27a4a43b64f12450ac42bde0a1eed031273", "extractor": "python-ast-v3-3.15", "id": "ev-864bcdbcdbb8bca96d1a44f6", "observation": "Possible call to session.commit", "sourceId": "src-8a4166c7c064b84bc0f54655"}, {"classification": "source_code", "excerptHash": "822f6becb2aea5d3411003a10ed7cf1c268a365941cdcda53f5eb16a174a9485", "extractor": "python-ast-v3-3.15", "id": "ev-0baebf3be555d17b9e5ec278", "observation": "Possible call to tasks.add_task", "sourceId": "src-e38ef936498a2a762cb0427e"}, {"classification": "source_code", "excerptHash": "793fef28aeede1779bb39811353d3f7ca058a73a180264007ca3dece5ea09868", "extractor": "python-ast-v3-3.15", "id": "ev-4862f3f66a50ceb9b6fc76d2", "observation": "Possible call to session.rollback", "sourceId": "src-6b62758bf55e40a3e534a00d"}, {"classification": "source_code", "excerptHash": "a05dbe67b1d9ffe620043a4bd1d47b2cbf573f711b859b9fdc60ad4f4d588153", "extractor": "python-ast-v3-3.15", "id": "ev-30aea39274c4a3d052c11747", "observation": "Possible call to app.post", "sourceId": "src-b9534e25ab4f4fee08bbf363"}, {"classification": "source_code", "excerptHash": "402785a92421cb6a9ae120d488a52e59eef712061488237160a4e19652efe949", "extractor": "python-ast-v3-3.15", "id": "ev-f41329c8073a556848741fad", "observation": "Possible call to asyncio.wait_for", "sourceId": "src-f85408c79bb660a788c15dc8"}, {"classification": "source_code", "excerptHash": "402785a92421cb6a9ae120d488a52e59eef712061488237160a4e19652efe949", "extractor": "python-ast-v3-3.15", "id": "ev-5f839b680a4d10119839443c", "observation": "Possible call to exchange.publish", "sourceId": "src-f85408c79bb660a788c15dc8"}, {"classification": "source_code", "excerptHash": "609c7793f1d06da70fcbc93e34c7bd2fdceccf7472b0e927eb5ebc604e79bc2d", "extractor": "python-ast-v3-3.15", "id": "ev-059827f9ad9cedc3a594f4dd", "observation": "Try control boundary", "sourceId": "src-2fe00d70dbb12e604ae97df7"}, {"classification": "source_code", "excerptHash": "17a38b47a7472ea594aa2b2bf2d3a1dd0b4c9bb3b670eade9fd3914400416898", "extractor": "python-ast-v3-3.15", "id": "ev-534117c14a37d67bac090b62", "observation": "Return control boundary", "sourceId": "src-77144989edc15482b15c634a"}, {"classification": "source_code", "excerptHash": "3ecc4ec319add1d8d0b001cc6341d270bc8b5c3457a62df5fee3571915d2e2f0", "extractor": "python-ast-v3-3.15", "id": "ev-afd7e3664a6e6ade5e0d2ef2", "observation": "Raise control boundary", "sourceId": "src-a303b44fa792d1b6f3307bcd"}, {"classification": "source_code", "excerptHash": "402785a92421cb6a9ae120d488a52e59eef712061488237160a4e19652efe949", "extractor": "python-ast-v3-3.15", "id": "ev-5af60d96980bc8860f9ae5e5", "observation": "Await control boundary", "sourceId": "src-f85408c79bb660a788c15dc8"}], "glossary": [{"claimIds": ["claim-task-20760a5900e3a2cc5ab7b77d"], "definition": "A declared callable in this fixture; its business policy is not established.", "id": "semantic-term-callable", "term": "app.create_order"}], "operations": [{"evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"], "id": "op-9ee8084d6f275c9356902a56", "kind": "async_function", "title": "app.create_order"}, {"evidenceIds": ["ev-9d734ba2f43f665b76071098"], "id": "op-5a2d7d0d5f2a8b06f3a9f8c1", "kind": "async_function", "title": "app.deliver"}, {"evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"], "id": "event-d6f371983aab0d012155a85b", "kind": "http_entry", "title": "app.post decorator on create_order"}, {"evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"], "id": "event-8437d1648f2bda6382108102", "kind": "async_function", "title": "Async declaration create_order"}, {"evidenceIds": ["ev-9d734ba2f43f665b76071098"], "id": "event-b8f3a13297d597adadbaaaab", "kind": "async_function", "title": "Async declaration deliver"}, {"evidenceIds": ["ev-4d6ec685a0bb20386ce6f78d"], "id": "event-24012ec7d9984642527e4f78", "kind": "db_write", "title": "session.add candidate"}, {"evidenceIds": ["ev-864bcdbcdbb8bca96d1a44f6"], "id": "event-76c3ae56d0d0eac5e11dd9ca", "kind": "transaction_boundary", "title": "session.commit candidate"}, {"evidenceIds": ["ev-0baebf3be555d17b9e5ec278"], "id": "event-02064ef929391d7003d9b333", "kind": "background_task", "title": "tasks.add_task candidate"}, {"evidenceIds": ["ev-4862f3f66a50ceb9b6fc76d2"], "id": "event-fb5dcf698f56cebc95d4d412", "kind": "transaction_boundary", "title": "session.rollback candidate"}, {"evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "event-02ee436bde1b71b73f0d9aaf", "kind": "async_boundary", "title": "asyncio.wait_for candidate"}, {"evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "event-ee26772bc8a5761b39c6850e", "kind": "publish", "title": "exchange.publish candidate"}, {"evidenceIds": ["ev-059827f9ad9cedc3a594f4dd"], "id": "event-13b3ffd2cfe97b579b507398", "kind": "control_try", "title": "Try boundary"}, {"evidenceIds": ["ev-afd7e3664a6e6ade5e0d2ef2"], "id": "event-fcc71187db43213db7a63ad1", "kind": "control_raise", "title": "Raise boundary"}, {"evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "event-e8ed5ec7b18fa205a3646a78", "kind": "control_await", "title": "Await boundary"}, {"id": "scenario-summary-08c0fcfebbc3b468c74792c9", "title": "Callable review: app.create_order", "kind": "scenario_summary", "evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"]}], "overrides": [], "qualityFindings": [], "relationships": [{"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"], "id": "edge-2c0fadb6845fbb2eadf95a49", "kind": "http_entry", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-d6f371983aab0d012155a85b"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-7a88dcae7a86ba287aafc27c"], "id": "edge-c3a1595f1da6e6ada0b5669a", "kind": "async_function", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-8437d1648f2bda6382108102"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-9d734ba2f43f665b76071098"], "id": "edge-48eb2c230b08783657679d24", "kind": "async_function", "resolution": "possible", "source": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "target": "event-b8f3a13297d597adadbaaaab"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-4d6ec685a0bb20386ce6f78d"], "id": "edge-0067724255179740f0299e8e", "kind": "db_write", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-24012ec7d9984642527e4f78"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-864bcdbcdbb8bca96d1a44f6"], "id": "edge-340da39d44206f599037ac4b", "kind": "transaction_boundary", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-76c3ae56d0d0eac5e11dd9ca"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-0baebf3be555d17b9e5ec278"], "id": "edge-864f3f5a0853092965b78a44", "kind": "background_task", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-02064ef929391d7003d9b333"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-4862f3f66a50ceb9b6fc76d2"], "id": "edge-8d47b36748bdef39f8d91d7e", "kind": "transaction_boundary", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-fb5dcf698f56cebc95d4d412"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "edge-888bdd48e5bda104287c3bad", "kind": "async_boundary", "resolution": "possible", "source": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "target": "event-02ee436bde1b71b73f0d9aaf"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "edge-5db24d172518ab821c012e37", "kind": "publish", "resolution": "possible", "source": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "target": "event-ee26772bc8a5761b39c6850e"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-059827f9ad9cedc3a594f4dd"], "id": "edge-0962094b89f706bd7c242237", "kind": "control_try", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-13b3ffd2cfe97b579b507398"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-afd7e3664a6e6ade5e0d2ef2"], "id": "edge-9120ba1105cc059b101f57a5", "kind": "control_raise", "resolution": "possible", "source": "symbol-9ee8084d6f275c9356902a56", "target": "event-fcc71187db43213db7a63ad1"}, {"condition": "Detected pattern; execution and ordering unproven", "evidenceIds": ["ev-f41329c8073a556848741fad", "ev-5f839b680a4d10119839443c", "ev-5af60d96980bc8860f9ae5e5"], "id": "edge-c7014fe4a3196e24dd34736c", "kind": "control_await", "resolution": "possible", "source": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "target": "event-e8ed5ec7b18fa205a3646a78"}], "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c", "scenarios": [{"id": "scenario-20760a5900e3a2cc5ab7b77d", "title": "Static trace: app.create_order", "trigger": "Entry into the declared callable; actual dispatch is unproven", "operationIds": ["op-9ee8084d6f275c9356902a56", "event-d6f371983aab0d012155a85b", "event-8437d1648f2bda6382108102", "event-24012ec7d9984642527e4f78", "event-76c3ae56d0d0eac5e11dd9ca", "event-02064ef929391d7003d9b333", "event-fb5dcf698f56cebc95d4d412", "event-13b3ffd2cfe97b579b507398", "event-fcc71187db43213db7a63ad1"], "claimIds": ["claim-task-20760a5900e3a2cc5ab7b77d"], "outcomes": ["Static evidence boundary at app.post decorator on create_order", "Static evidence boundary at Async declaration create_order", "Static evidence boundary at session.add candidate", "Static evidence boundary at session.commit candidate", "Static evidence boundary at tasks.add_task candidate", "Static evidence boundary at session.rollback candidate", "Static evidence boundary at Try boundary", "Static evidence boundary at Raise boundary"], "unknowns": ["Static candidates only; runtime ordering and delivery guarantees are unproven."]}, {"id": "scenario-4e0e0fbd93ae5b80d31f0f28", "title": "Static trace: app.deliver", "trigger": "Entry into the declared callable; actual dispatch is unproven", "operationIds": ["op-5a2d7d0d5f2a8b06f3a9f8c1", "event-b8f3a13297d597adadbaaaab", "event-02ee436bde1b71b73f0d9aaf", "event-ee26772bc8a5761b39c6850e", "event-e8ed5ec7b18fa205a3646a78"], "claimIds": ["claim-task-4e0e0fbd93ae5b80d31f0f28"], "outcomes": ["Static evidence boundary at Async declaration deliver", "Static evidence boundary at asyncio.wait_for candidate", "Static evidence boundary at exchange.publish candidate", "Static evidence boundary at Await boundary"], "unknowns": ["Static candidates only; runtime ordering and delivery guarantees are unproven."]}, {"claimIds": ["claim-task-20760a5900e3a2cc5ab7b77d"], "id": "semantic-callable-review", "operationIds": ["scenario-summary-08c0fcfebbc3b468c74792c9", "op-9ee8084d6f275c9356902a56"], "outcomes": ["A declaration was observed; runtime execution is unknown"], "title": "Callable review: app.create_order", "trigger": "A declaration is present in the supplied fixture", "unknowns": ["Business policy is not supplied by this fixture"]}], "schemaVersion": 1, "sources": [{"id": "src-57ef263bc15d7ba94804d5a5", "kind": "source_code", "lineEnd": 18, "lineStart": 10, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-1a000b80a311b20cdba5841b", "kind": "source_code", "lineEnd": 21, "lineStart": 20, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-a2cc06c162d672a071c72ec0", "kind": "source_code", "lineEnd": 7, "lineStart": 7, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-5f660923a7cab2fd0692eb72", "kind": "source_code", "lineEnd": 12, "lineStart": 12, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-8a4166c7c064b84bc0f54655", "kind": "source_code", "lineEnd": 13, "lineStart": 13, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-e38ef936498a2a762cb0427e", "kind": "source_code", "lineEnd": 14, "lineStart": 14, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-6b62758bf55e40a3e534a00d", "kind": "source_code", "lineEnd": 17, "lineStart": 17, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-b9534e25ab4f4fee08bbf363", "kind": "source_code", "lineEnd": 9, "lineStart": 9, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-f85408c79bb660a788c15dc8", "kind": "source_code", "lineEnd": 21, "lineStart": 21, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-2fe00d70dbb12e604ae97df7", "kind": "source_code", "lineEnd": 18, "lineStart": 11, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-77144989edc15482b15c634a", "kind": "source_code", "lineEnd": 15, "lineStart": 15, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}, {"id": "src-a303b44fa792d1b6f3307bcd", "kind": "source_code", "lineEnd": 18, "lineStart": 18, "path": "app.py", "revision": "f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c"}], "symbols": [{"id": "symbol-9ee8084d6f275c9356902a56", "kind": "async_function", "qualifiedName": "app.create_order", "sourceRefs": ["src-57ef263bc15d7ba94804d5a5"]}, {"id": "symbol-5a2d7d0d5f2a8b06f3a9f8c1", "kind": "async_function", "qualifiedName": "app.deliver", "sourceRefs": ["src-1a000b80a311b20cdba5841b"]}]}</script><script id="mole-config" type="application/json">{"artifactId": "20f294be75154d464501d3b1"}</script><script id="mole-layouts" type="application/json">{"view-overview": {"width": 780, "height": 396, "nodes": {"op-9ee8084d6f275c9356902a56": {"x": 60, "y": 40, "width": 250, "height": 88, "lines": ["app.create_order"], "truncated": false}, "op-5a2d7d0d5f2a8b06f3a9f8c1": {"x": 440, "y": 40, "width": 250, "height": 88, "lines": ["app.deliver"], "truncated": false}, "scenario-summary-08c0fcfebbc3b468c74792c9": {"x": 60, "y": 198, "width": 250, "height": 88, "lines": ["Callable review:", "app.create_order"], "truncated": false}}, "edges": {}, "warning": ""}, "view-1b19da0e7506894547effec2": {"width": 1540, "height": 746, "nodes": {"event-02064ef929391d7003d9b333": {"x": 60, "y": 232, "width": 250, "height": 88, "lines": ["tasks.add_task candidate"], "truncated": false}, "event-13b3ffd2cfe97b579b507398": {"x": 440, "y": 232, "width": 250, "height": 88, "lines": ["Try boundary"], "truncated": false}, "event-24012ec7d9984642527e4f78": {"x": 820, "y": 232, "width": 250, "height": 88, "lines": ["session.add candidate"], "truncated": false}, "event-76c3ae56d0d0eac5e11dd9ca": {"x": 1200, "y": 232, "width": 250, "height": 88, "lines": ["session.commit candidate"], "truncated": false}, "event-8437d1648f2bda6382108102": {"x": 60, "y": 390, "width": 250, "height": 88, "lines": ["Async declaration", "create_order"], "truncated": false}, "event-d6f371983aab0d012155a85b": {"x": 440, "y": 390, "width": 250, "height": 88, "lines": ["app.post decorator on", "create_order"], "truncated": false}, "event-fb5dcf698f56cebc95d4d412": {"x": 820, "y": 390, "width": 250, "height": 88, "lines": ["session.rollback candidate"], "truncated": false}, "event-fcc71187db43213db7a63ad1": {"x": 1200, "y": 390, "width": 250, "height": 88, "lines": ["Raise boundary"], "truncated": false}, "op-9ee8084d6f275c9356902a56": {"x": 60, "y": 548, "width": 250, "height": 88, "lines": ["app.create_order"], "truncated": false}, "symbol-9ee8084d6f275c9356902a56": {"x": 440, "y": 548, "width": 250, "height": 88, "lines": ["app.create_order"], "truncated": false}}, "edges": {"edge-2c0fadb6845fbb2eadf95a49": {"d": "M 690 592.0 H 720 V 25 H 410 V 434.0 H 440", "x": 565.0, "y": 20}, "edge-c3a1595f1da6e6ada0b5669a": {"d": "M 690 592.0 H 720 V 49 H 30 V 434.0 H 60", "x": 375.0, "y": 44}, "edge-0067724255179740f0299e8e": {"d": "M 690 592.0 H 720 V 73 H 790 V 276.0 H 820", "x": 755.0, "y": 68}, "edge-340da39d44206f599037ac4b": {"d": "M 690 592.0 H 720 V 97 H 1170 V 276.0 H 1200", "x": 945.0, "y": 92}, "edge-864f3f5a0853092965b78a44": {"d": "M 690 592.0 H 720 V 121 H 30 V 276.0 H 60", "x": 375.0, "y": 116}, "edge-8d47b36748bdef39f8d91d7e": {"d": "M 690 592.0 H 720 V 145 H 790 V 434.0 H 820", "x": 755.0, "y": 140}, "edge-0962094b89f706bd7c242237": {"d": "M 690 592.0 H 720 V 169 H 410 V 276.0 H 440", "x": 565.0, "y": 164}, "edge-9120ba1105cc059b101f57a5": {"d": "M 690 592.0 H 720 V 193 H 1170 V 434.0 H 1200", "x": 945.0, "y": 188}}, "warning": ""}, "view-521179d22a564d2188f4e9f4": {"width": 1160, "height": 492, "nodes": {"event-02ee436bde1b71b73f0d9aaf": {"x": 60, "y": 136, "width": 250, "height": 88, "lines": ["asyncio.wait_for candidate"], "truncated": false}, "event-b8f3a13297d597adadbaaaab": {"x": 440, "y": 136, "width": 250, "height": 88, "lines": ["Async declaration deliver"], "truncated": false}, "event-e8ed5ec7b18fa205a3646a78": {"x": 820, "y": 136, "width": 250, "height": 88, "lines": ["Await boundary"], "truncated": false}, "event-ee26772bc8a5761b39c6850e": {"x": 60, "y": 294, "width": 250, "height": 88, "lines": ["exchange.publish candidate"], "truncated": false}, "op-5a2d7d0d5f2a8b06f3a9f8c1": {"x": 440, "y": 294, "width": 250, "height": 88, "lines": ["app.deliver"], "truncated": false}, "symbol-5a2d7d0d5f2a8b06f3a9f8c1": {"x": 820, "y": 294, "width": 250, "height": 88, "lines": ["app.deliver"], "truncated": false}}, "edges": {"edge-48eb2c230b08783657679d24": {"d": "M 1070 338.0 H 1100 V 25 H 410 V 180.0 H 440", "x": 755.0, "y": 20}, "edge-888bdd48e5bda104287c3bad": {"d": "M 1070 338.0 H 1100 V 49 H 30 V 180.0 H 60", "x": 565.0, "y": 44}, "edge-5db24d172518ab821c012e37": {"d": "M 1070 338.0 H 1100 V 73 H 30 V 338.0 H 60", "x": 565.0, "y": 68}, "edge-c7014fe4a3196e24dd34736c": {"d": "M 1070 338.0 H 1100 V 97 H 790 V 180.0 H 820", "x": 945.0, "y": 92}}, "warning": ""}, "view-08c0fcfebbc3b468c74792c9": {"width": 780, "height": 238, "nodes": {"scenario-summary-08c0fcfebbc3b468c74792c9": {"x": 60, "y": 40, "width": 250, "height": 88, "lines": ["Callable review:", "app.create_order"], "truncated": false}, "op-9ee8084d6f275c9356902a56": {"x": 440, "y": 40, "width": 250, "height": 88, "lines": ["app.create_order"], "truncated": false}}, "edges": {}, "warning": ""}}</script><script>"use strict";
+// Field overrides are presentation-only; they never rewrite generated SKM.
+window.moleOverrides = (() => {
+  const model = JSON.parse(document.getElementById("mole-model").textContent);
+  const {artifactId} = JSON.parse(document.getElementById("mole-config").textContent);
+  const key = "mole:" + artifactId + ":v1";
+  const fields = new Map();
+  const conflicts = new Set();
+  const allowed = new Set(["label", "description", "notes", "definition", "term"]);
+  let changed = () => {};
+  function message(text) { document.getElementById("warning").textContent = text; }
+  function hash(text) {
+    let value = 2166136261;
+    for (const char of String(text)) value = Math.imul(value ^ char.codePointAt(0), 16777619);
+    return "fnv1a-v1:" + (value >>> 0).toString(16);
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      if (raw.length > 2000000) throw new Error("size");
+      const stored = JSON.parse(raw);
+      if (stored.schemaVersion !== 1 || stored.artifactId !== artifactId || !Array.isArray(stored.fields) || stored.fields.length > 10000) throw new Error("schema");
+      for (const field of stored.fields) {
+        if (!field || typeof field.targetId !== "string" || !allowed.has(field.fieldPath) ||
+            typeof field.baseFieldHash !== "string" || typeof field.value !== "string" || field.value.length > 10000) throw new Error("field");
+      }
+      for (const field of stored.fields) fields.set(JSON.stringify([field.targetId, field.fieldPath]), field);
+    } catch { message("Local edits could not be loaded: storage is blocked, malformed, or incompatible. Generated content remains available."); }
+  }
+  function value(id, field, generated, display = generated) {
+    const record = fields.get(JSON.stringify([id, field]));
+    if (!record) return display;
+    if (record.baseFieldHash !== hash(generated) && record.value !== generated) {
+      conflicts.add(JSON.stringify([id, field]));
+      message("Conflicting local edits retained: generated fields changed. Review or edit the affected fields.");
+    }
+    return record.value;
+  }
+  function edit(id, field, generated, display = generated) {
+    if (!allowed.has(field)) return;
+    const existing = document.getElementById("mole-editor");
+    if (existing) existing.remove();
+    const dialog = document.createElement("dialog"); dialog.id = "mole-editor";
+    const label = document.createElement("label"); label.textContent = "Edit " + field + " (local to this browser)";
+    const input = document.createElement("textarea"); input.id = "mole-edit-value"; input.maxLength = 10000;
+    input.value = value(id, field, generated, display); label.htmlFor = input.id;
+    const save = document.createElement("button"); save.type = "button"; save.id = "mole-save"; save.textContent = "Save";
+    const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
+    cancel.addEventListener("click", () => dialog.close());
+    save.addEventListener("click", () => {
+      const identity = JSON.stringify([id, field]);
+      fields.set(identity, {targetId:id, fieldPath:field, baseFieldHash:hash(generated), value:input.value,
+        baseRevision:model.revision, changedAt:new Date().toISOString(), origin:"browser"});
+      conflicts.delete(identity);
+      let saved = true;
+      try {
+        const encoded = JSON.stringify({schemaVersion:1, artifactId, baseRevision:model.revision, fields:[...fields.values()]});
+        if (encoded.length > 2000000 || fields.size > 10000) throw new Error("storage limit");
+        localStorage.setItem(key, encoded);
+      } catch { saved = false; }
+      dialog.close(); changed();
+      message(saved ? (conflicts.size ? "Local edit saved; other generated-field conflicts remain." : "Local edit saved in this browser.") : "Could not save to storage. This edit is in memory only.");
+    });
+    dialog.append(label, input, save, cancel); document.body.append(dialog); dialog.showModal(); input.focus();
+  }
+  load();
+  return {value, edit, onChange: callback => {changed = callback;}};
+})();
+</script><script>"use strict";
+(() => {
+  const model = JSON.parse(document.getElementById("mole-model").textContent);
+  const edits = window.moleOverrides;
+  const layouts = JSON.parse(document.getElementById("mole-layouts").textContent);
+  const $ = id => document.getElementById(id);
+  const ns = "http://www.w3.org/2000/svg";
+  const views = new Map(model.diagramViews.map(v => [v.id, v]));
+  const entities = new Map(["symbols", "operations", "relationships", "claims", "scenarios", "glossary"].flatMap(k => model[k].map(x => [x.id, x])));
+  const evidence = new Map(model.evidence.map(x => [x.id, x]));
+  const sources = new Map(model.sources.map(x => [x.id, x]));
+  const baseWarning = $("warning").textContent;
+  let route = views.size ? [model.diagramViews[0].id] : [];
+  let selected = null;
+  let zoom = 1;
+  let baseWidth = 1, baseHeight = 1;
+  const svg = (tag, attrs, parent) => {
+    const element = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attrs || {})) element.setAttribute(key, value);
+    if (parent) parent.append(element);
+    return element;
+  };
+  const paragraph = (parent, value, tag = "p") => {
+    const element = document.createElement(tag);
+    element.textContent = value;
+    parent.append(element);
+    return element;
+  };
+  function childFor(view, node) {
+    return (view.childRefs || []).map(id => views.get(id)).find(child => child && child.scenarioIds.some(id => {
+      const scenario = entities.get(id);
+      return scenario && scenario.operationIds[0] === node.id;
+    }));
+  }
+  function canonicalLabel(id, fallback) {
+    const entity = entities.get(id);
+    return entity ? entity.title || entity.qualifiedName || entity.statement || entity.term || entity.kind || fallback : fallback;
+  }
+  function editable(element, id, field, base, display = base) {
+    element.tabIndex = 0; element.setAttribute("role", "button");
+    element.setAttribute("aria-label", "Edit " + field + "; double click or F2");
+    element.addEventListener("dblclick", event => {event.stopPropagation(); edits.edit(id, field, base, display);});
+    element.addEventListener("keydown", event => {if(event.key === "F2") {event.preventDefault(); event.stopPropagation(); edits.edit(id, field, base, display);}});
+  }
+  function select(id) {
+    selected = id;
+    document.querySelectorAll(".selected").forEach(e => e.classList.remove("selected"));
+    for (const element of $("diagram").querySelectorAll("[data-id]")) {
+      if (element.dataset.id === id) element.classList.add("selected");
+    }
+    const detail = $("details");
+    detail.replaceChildren();
+    const entity = entities.get(id);
+    if (!entity) return;
+    const baseLabel = entity.title || entity.qualifiedName || entity.statement || entity.term || entity.kind;
+    const heading = paragraph(detail, edits.value(id, "label", baseLabel), "h2");
+    editable(heading, id, "label", baseLabel);
+    for (const field of ["description", "notes"]) {
+      const base = entity[field] || "";
+      const element = paragraph(detail, edits.value(id, field, base) || "Add " + field);
+      editable(element, id, field, base);
+    }
+    paragraph(detail, "ID: " + id);
+    if (entity.resolution) paragraph(detail, "Resolution: " + entity.resolution + ". " + entity.condition);
+    const ids = new Set(entity.evidenceIds || []);
+    if (entity.sourceRefs) for (const ev of model.evidence) if (entity.sourceRefs.includes(ev.sourceId)) ids.add(ev.id);
+    for (const claim of model.claims) {
+      if (claim.evidenceIds.some(ev => ids.has(ev))) {
+        paragraph(detail, claim.status + ": " + claim.statement);
+        for (const limitation of claim.limitations) paragraph(detail, "Limitation: " + limitation);
+      }
+    }
+    if (!ids.size) paragraph(detail, "No direct evidence attached; consult the containing process.");
+    for (const id of ids) {
+      const ev = evidence.get(id), source = ev && sources.get(ev.sourceId);
+      if (source) paragraph(detail, source.path + ":" + source.lineStart + "–" + source.lineEnd + " · " + ev.classification + " · " + ev.observation);
+    }
+  }
+  function open(child) {
+    if (!child || route.includes(child.id)) return;
+    route.push(child.id);
+    selected = null;
+    zoom = 1;
+    render();
+  }
+  function tree() {
+    const nav = $("tree");
+    nav.replaceChildren();
+    const query = $("search").value.toLowerCase();
+    function branch(id, ancestors, parent) {
+      const view = views.get(id);
+      if (!view || ancestors.includes(id)) return;
+      const list = document.createElement("ul"), item = document.createElement("li");
+      const button = document.createElement("button");
+      button.textContent = view.title;
+      button.type = "button";
+      if (id === route[route.length - 1]) button.setAttribute("aria-current", "page");
+      button.addEventListener("click", () => { route = [...ancestors, id]; zoom = 1; render(); });
+      if (!query || view.title.toLowerCase().includes(query)) item.append(button);
+      for (const child of view.childRefs) branch(child, [...ancestors, id], item);
+      if (item.childNodes.length) { list.append(item); parent.append(list); }
+    }
+    if (model.diagramViews.length) branch(model.diagramViews[0].id, [], nav);
+    if (model.glossary.length) {
+      paragraph(nav, "Glossary", "h2");
+      for (const term of model.glossary) {
+        const button = document.createElement("button"); button.type = "button";
+        button.textContent = edits.value(term.id, "term", term.term); button.addEventListener("click", () => {
+          select(term.id); const definition = paragraph($("details"), edits.value(term.id, "definition", term.definition));
+          editable(definition, term.id, "definition", term.definition);
+          const termLabel = paragraph($("details"), edits.value(term.id, "term", term.term));
+          editable(termLabel, term.id, "term", term.term);
+        }); nav.append(button);
+      }
+    }
+  }
+  function sizing() {
+    const width = Math.max(1, $("viewport").clientWidth - 2);
+    const height = Math.max(1, $("viewport").clientHeight - 2);
+    const scale = Math.min(width / baseWidth, height / baseHeight, 1) * zoom;
+    $("diagram").style.width = baseWidth * scale + "px";
+    $("diagram").style.height = baseHeight * scale + "px";
+    $("zoom-label").textContent = Math.round(zoom * 100) + "%";
+    $("fit").hidden = Math.abs(zoom - 1) < .001;
+  }
+  function render() {
+    const diagram = $("diagram");
+    diagram.replaceChildren();
+    tree();
+    $("back").disabled = route.length < 2;
+    const view = views.get(route[route.length - 1]);
+    if (!view) { $("title").textContent = "No supported diagram views"; return; }
+    $("title").textContent = view.title;
+    const geometry = JSON.parse(JSON.stringify(layouts[view.id]));
+    const rows = [...new Set(Object.values(geometry.nodes).map(p => p.y))].sort((a,b)=>a-b);
+    const rowGroups = rows.map(row => view.nodes.filter(node => geometry.nodes[node.id].y === row));
+    let heightDelta = 0;
+    for (const rowNodes of rowGroups) {
+      const oldHeight = Math.max(...rowNodes.map(node => geometry.nodes[node.id].height));
+      for (const node of rowNodes) {
+        const point = geometry.nodes[node.id];
+        const display = edits.value(node.id, "label", canonicalLabel(node.id, node.label), node.label);
+        const lines = display.split(/\r?\n/u).flatMap(line => line.match(/.{1,28}/gu) || [""]);
+        point.lines = lines.slice(0,12); point.truncated = lines.length > 12;
+        point.height = Math.max(88, 40 + point.lines.length * 18);
+        point.y += heightDelta;
+      }
+      heightDelta += Math.max(...rowNodes.map(node=>geometry.nodes[node.id].height)) - oldHeight;
+    }
+    geometry.height += heightDelta;
+    for (const edgeId of view.edgeIds) {
+      const edge = entities.get(edgeId), a = geometry.nodes[edge.source], b = geometry.nodes[edge.target];
+      const x1 = a.x+a.width, y1 = a.y+a.height/2, x2 = b.x, y2 = b.y+b.height/2;
+      const lane = geometry.edges[edgeId].y + 5;
+      geometry.edges[edgeId].d = `M ${x1} ${y1} H ${x1+30} V ${lane} H ${x2-30} V ${y2} H ${x2}`;
+    }
+    const positions = new Map(Object.entries(geometry.nodes));
+    baseWidth = geometry.width;
+    baseHeight = geometry.height;
+    $("warning").textContent = baseWarning + (geometry.warning ? " " + geometry.warning : "");
+    diagram.setAttribute("viewBox", "0 0 " + baseWidth + " " + baseHeight);
+    const defs = svg("defs", {}, diagram);
+    const marker = svg("marker", { id: "arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
+    svg("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "#607c63" }, marker);
+    for (const edgeId of view.edgeIds) {
+      const edge = entities.get(edgeId), a = edge && positions.get(edge.source), b = edge && positions.get(edge.target);
+      if (!a || !b) continue;
+      const group = svg("g", { class: "edge", "data-id": edge.id, tabindex: 0, role: "button", "aria-label": edge.kind }, diagram);
+      const path = geometry.edges[edgeId].d;
+      svg("path", { d: path, "marker-end": "url(#arrow)" }, group);
+      svg("path", { d: path, class: "hit" }, group);
+      const label = svg("text", { x: geometry.edges[edgeId].x, y: geometry.edges[edgeId].y, "text-anchor": "middle" }, group);
+      label.textContent = edits.value(edge.id, "label", edge.kind);
+      editable(label, edge.id, "label", edge.kind);
+      group.addEventListener("click", () => select(edge.id));
+      group.addEventListener("keydown", event => { if (event.key === "Enter") select(edge.id); });
+    }
+    for (const node of view.nodes) {
+      const point = positions.get(node.id), child = childFor(view, node);
+      const group = svg("g", { class: "node", "data-id": node.id, tabindex: 0, role: "button", "aria-label": edits.value(node.id, "label", canonicalLabel(node.id, node.label), node.label) + (child ? "; open with ArrowRight" : "") }, diagram);
+      svg("rect", { x: point.x, y: point.y, width: point.width, height: point.height, rx: 10 }, group);
+      const tooltip = svg("title", {}, group); tooltip.textContent = edits.value(node.id, "label", canonicalLabel(node.id, node.label), node.label);
+      const label = svg("text", { x: point.x + 12, y: point.y + 24 }, group);
+      point.lines.forEach((line, index) => { const span = svg("tspan", { x: point.x + 12, dy: index ? 18 : 0 }, label); span.textContent = line + (point.truncated && index === point.lines.length - 1 ? "…" : ""); if (span.getComputedTextLength() > point.width - 24) { span.setAttribute("textLength", point.width - 24); span.setAttribute("lengthAdjust", "spacingAndGlyphs"); } });
+      if (child) { const hint = svg("text", { x: point.x + point.width - 22, y: point.y + point.height - 12 }, group); hint.textContent = "↗"; }
+      editable(label, node.id, "label", canonicalLabel(node.id, node.label), node.label);
+      group.addEventListener("click", () => select(node.id));
+      group.addEventListener("dblclick", () => open(child));
+      group.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(node.id); }
+        if (event.key === "F2") { event.preventDefault(); edits.edit(node.id, "label", canonicalLabel(node.id, node.label), node.label); }
+        if (event.key === "ArrowRight") { event.preventDefault(); open(child); }
+      });
+    }
+    sizing();
+    $("viewport").scrollTo(0, 0);
+    if (selected) select(selected);
+  }
+  function back() { if (route.length > 1) { route.pop(); selected = null; zoom = 1; render(); } }
+  $("back").addEventListener("click", back);
+  $("search").addEventListener("input", tree);
+  $("zoom-in").addEventListener("click", () => { zoom = Math.min(64, zoom * 1.25); sizing(); });
+  $("zoom-out").addEventListener("click", () => { zoom = Math.max(.25, zoom / 1.25); sizing(); });
+  $("fit").addEventListener("click", () => { zoom = 1; sizing(); $("viewport").scrollTo(0, 0); });
+  document.addEventListener("keydown", event => { if (event.altKey && event.key === "ArrowLeft") { event.preventDefault(); back(); } });
+  new ResizeObserver(sizing).observe($("viewport"));
+  const viewport = $("viewport");
+  let drag = null;
+  viewport.addEventListener("pointerdown", event => {
+    if (event.pointerType !== "mouse" || event.button !== 0 || event.target.closest(".node,.edge")) return;
+    drag = {x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
+    viewport.setPointerCapture(event.pointerId); viewport.classList.add("dragging");
+  });
+  viewport.addEventListener("pointermove", event => {
+    if (!drag) return;
+    viewport.scrollLeft = drag.left - event.clientX + drag.x;
+    viewport.scrollTop = drag.top - event.clientY + drag.y;
+  });
+  const endDrag = () => { drag = null; viewport.classList.remove("dragging"); };
+  viewport.addEventListener("pointerup", event => {
+    if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+    endDrag();
+  });
+  viewport.addEventListener("pointercancel", endDrag);
+  viewport.addEventListener("lostpointercapture", endDrag);
+  viewport.addEventListener("keydown", event => {
+    if (event.key === "+" || event.key === "=") { event.preventDefault(); $("zoom-in").click(); }
+    if (event.key === "-") { event.preventDefault(); $("zoom-out").click(); }
+    if (event.key === "0") { event.preventDefault(); $("fit").click(); }
+  });
+  edits.onChange(() => { render(); if(selected) select(selected); });
+  render();
+})();
+</script></body></html>
+<!-- mole:generated:end id=explorer.html -->
+
+<!-- mole:manual:start -->
+<!-- mole:manual:end -->

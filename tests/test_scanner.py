@@ -5,11 +5,17 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.scanner import scan, PARSER_VERSION
+from molekit.scanner import ignored
 from molekit.workspace import read_json, atomic_json
 from molekit.pipeline import start, operate
 
 
 class ScannerTests(unittest.TestCase):
+    def test_gitignore_star_does_not_cross_path_components(self):
+        self.assertTrue(ignored("sub/app.py", [("", "sub/*.py")]))
+        self.assertFalse(ignored("sub/deep/app.py", [("", "sub/*.py")]))
+        self.assertTrue(ignored("sub/app.py", [("", "sub/**/*.py")]))
+        self.assertTrue(ignored("sub/deep/app.py", [("", "sub/**/*.py")]))
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

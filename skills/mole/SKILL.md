@@ -2,9 +2,9 @@
 name: mole
 description: Investigate Python codebases through source-backed local tasks, explain workflows and failure paths, and distinguish static candidates from verified runtime behavior.
 license: Apache-2.0 (see LICENSE)
-compatibility: Requires a shell and Python 3.11+; core diagnostics run offline.
+compatibility: Requires a shell and Python 3.11+; bundled engine runs offline without third-party Python packages.
 metadata:
-  version: "0.1.0.dev1"
+  version: "1.0.0rc1"
 ---
 
 # MOLE

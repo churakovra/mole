@@ -1,4 +1,4 @@
-"""Bootstrap CLI. No target repository is read or executed."""
+"""Local engine CLI. Target code is read as data and never executed."""
 
 import argparse
 import json
@@ -99,6 +99,10 @@ def main(argv=None):
                 "schemas/knowledge-model.v1.schema.json", "schemas/task.v1.schema.json",
                 "schemas/semantic-patch.v1.schema.json", "schemas/cli-envelope.v1.schema.json",
                 "assets/explorer/explorer.js", "assets/explorer/explorer.css", "assets/explorer/overrides.js"]
+    required += ["molekit/" + name + ".py" for name in
+                 ("__init__", "cli", "errors", "workspace", "pipeline", "model", "scanner",
+                  "adapters", "agent", "knowledge", "markdown", "html", "layout", "drawio", "mermaid", "update", "safety")]
+    required += ["references/" + name + ".md" for name in ("agent-protocol", "evidence-policy", "confluence-export")]
     if not all((payload / name).is_file() for name in required):
         failure("PAYLOAD_INCOMPLETE", "Installed skill payload is incomplete.", "Copy the entire skills/mole directory.")
         return 3

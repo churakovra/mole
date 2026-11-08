@@ -110,6 +110,22 @@ class SecurityTests(unittest.TestCase):
             self.assertEqual(state["scan"]["model"]["symbols"], [])
             self.assertIn("reduced_coverage_no_ast_adapter", [x["reason"] for x in state["scan"]["limitations"]])
 
+    def test_bounded_file_scope_and_escape_rejection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            (repo / "one.py").write_text("def one(): return 1\n")
+            (repo / "two.py").write_text("def two(): return 2\n")
+            workspace = Path(tmp) / "workspace"
+            start(repo, workspace, "quick", "one.py")
+            operate("next", workspace)
+            state = load(workspace)
+            self.assertEqual([item["path"] for item in state["scan"]["index"]], ["one.py"])
+            (repo / "two.py").write_text("def two(): return 99\n")
+            self.assertEqual(operate("diff", workspace)["changes"]["changed"], [])
+            with self.assertRaises(MoleError):
+                start(repo, Path(tmp) / "bad", "standard", "../outside")
+
     @unittest.skipUnless(os.name == "posix" and os.geteuid() != 0, "Requires non-root POSIX permissions")
     def test_real_permission_denial_does_not_change_state(self):
         with tempfile.TemporaryDirectory() as tmp:

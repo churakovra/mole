@@ -133,6 +133,8 @@ def validate_model(model):
             raise MoleError("INVALID_VIEW", "View has duplicate nodes or absent edge endpoints.")
     for term in model["glossary"]:
         refs(term["claimIds"], "claims")
+        if not term["claimIds"]:
+            raise MoleError("INSUFFICIENT_EVIDENCE", "Glossary definition requires a claim basis.")
     for override in model["overrides"]:
         if override["targetId"] not in lookup:
             raise MoleError("DANGLING_REFERENCE", "Invalid override target.")

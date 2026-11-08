@@ -14,7 +14,7 @@ from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json
 from molekit.safety import read_source
 
-PARSER_VERSION = "python-ast-v2-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v3-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
@@ -83,21 +83,38 @@ def ignored(path, rules, is_dir=False):
         anchored = pattern.startswith("/")
         pattern = pattern.lstrip("/")
         candidate = relative if anchored or "/" in pattern else relative.split("/")[-1]
-        if fnmatch.fnmatchcase(candidate, pattern):
+        patterns = pattern.split("/")
+        active = {0}
+        def expand(indices):
+            expanded = set(indices)
+            for index in sorted(indices):
+                while index < len(patterns) and patterns[index] == "**":
+                    index += 1
+                    expanded.add(index)
+            return expanded
+        for component in candidate.split("/"):
+            active = expand(active)
+            active = {index if patterns[index] == "**" else index + 1 for index in active
+                      if index < len(patterns) and (patterns[index] == "**" or fnmatch.fnmatchcase(component, patterns[index]))}
+        if len(patterns) in expand(active):
             result = not negative
     return result
 
 
-def inventory(repo, workspace, excluded=()):
+def inventory(repo, workspace, excluded=(), scope="repository"):
     root = Path(repo).resolve()
     workspace = Path(workspace).resolve()
     excluded = {Path(p).resolve() for p in excluded}
+    scoped = root if scope == "repository" else root / scope
     records, limitations = [], []
     total_bytes = 0
     started = time.monotonic()
 
     def visit(directory, inherited):
         nonlocal records, total_bytes
+        if len(directory.relative_to(root).parts) > 128:
+            limitations.append({"path": directory.relative_to(root).as_posix(), "reason": "directory_depth_budget_exceeded"})
+            return
         if time.monotonic() - started > 30 or len(records) >= MAX_FILES:
             limitations.append({"path": ".", "reason": "inventory_budget_exceeded"})
             return
@@ -107,12 +124,17 @@ def inventory(repo, workspace, excluded=()):
             for line in read_source(root, ignore_file).decode("utf-8", errors="replace").splitlines():
                 pattern = line.strip()
                 if pattern and not pattern.startswith("#"):
+                    if len(pattern) > 1024 or len(rules) >= 512:
+                        limitations.append({"path": ignore_file.relative_to(root).as_posix(), "reason": "ignore_rules_budget_exceeded"})
+                        break
                     rules.append(("" if directory == root else directory.relative_to(root).as_posix(), pattern))
         for child in sorted(directory.iterdir()):
             if time.monotonic() - started > 30 or len(records) >= MAX_FILES or total_bytes >= 64 * 1024 * 1024:
                 limitations.append({"path": ".", "reason": "inventory_budget_exceeded"})
                 return
             relative = child.relative_to(root).as_posix()
+            if child != scoped and not child.is_relative_to(scoped) and not scoped.is_relative_to(child):
+                continue
             if child.is_symlink():
                 limitations.append({"path": relative, "reason": "symlink_excluded"})
                 continue
@@ -227,13 +249,14 @@ def extract(content, path):
             "branches": extractor.branches, "imports": extractor.imports}
 
 
-def scan(repo, workspace, excluded=()):
-    records, limitations = inventory(repo, workspace, excluded)
+def scan(repo, workspace, excluded=(), scope="repository"):
+    deadline = time.monotonic() + 60
+    records, limitations = inventory(repo, workspace, excluded, scope)
     cache_path = Path(workspace) / "scan-cache.json"
     cache = read_json(cache_path) if cache_path.exists() else {}
     if not isinstance(cache, dict):
         cache = {}
-    revision = sha("\n".join(r["path"] + ":" + r["hash"] for r in records).encode())
+    revision = sha((PARSER_VERSION + "\n" + "\n".join(r["path"] + ":" + r["hash"] for r in records)).encode())
     model = empty_model(revision)
     facts = {}
     reused = 0
@@ -254,6 +277,9 @@ def scan(repo, workspace, excluded=()):
         return source_id, ev_id
 
     for record in records:
+        if time.monotonic() > deadline:
+            limitations.append({"path": ".", "reason": "analysis_time_budget_exceeded"})
+            break
         path = record["path"]
         if not path.endswith(".py"):
             suffix = Path(path).suffix.lower()
@@ -303,6 +329,9 @@ def scan(repo, workspace, excluded=()):
 
     unresolved = []
     for record in records:
+        if time.monotonic() > deadline:
+            limitations.append({"path": ".", "reason": "analysis_time_budget_exceeded"})
+            break
         path = record["path"]
         if path not in facts:
             continue
@@ -321,5 +350,5 @@ def scan(repo, workspace, excluded=()):
     atomic_json(cache_path, facts)
     validate_model(model)
     index = [{"path": r["path"], "hash": r["hash"]} for r in records]
-    return {"model": model, "index": index, "facts": facts, "unresolved": unresolved,
+    return {"model": model, "parserVersion": PARSER_VERSION, "index": index, "facts": facts, "unresolved": unresolved,
             "limitations": limitations, "stats": {"files": len(index), "parsed": len(facts) - reused, "reused": reused}}

@@ -89,6 +89,16 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual((self.workspace / "state.json").read_bytes(), before)
         self.assertEqual(list(self.workspace.glob(".mole-*")), [])
 
+    def test_generated_checkpoint_cannot_exceed_reader_complexity(self):
+        self.start()
+        before = (self.workspace / "state.json").read_bytes()
+        nested = []
+        for _ in range(65):
+            nested = [nested]
+        with self.assertRaises(MoleError):
+            atomic_json(self.workspace / "state.json", nested)
+        self.assertEqual((self.workspace / "state.json").read_bytes(), before)
+
     def test_lock_released_after_process_termination(self):
         self.start()
         payload = Path(__file__).resolve().parents[1] / "skills/mole"

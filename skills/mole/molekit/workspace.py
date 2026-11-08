@@ -25,6 +25,20 @@ def invalid_constant(value):
     raise ValueError("Non-finite JSON number")
 
 
+def check_complexity(value):
+    pending = [(value, 0)]
+    count = 0
+    while pending:
+        item, depth = pending.pop()
+        count += 1
+        if depth > 64 or count > 200000:
+            raise MoleError("INVALID_JSON", "JSON complexity limit exceeded.")
+        if isinstance(item, dict):
+            pending.extend((child, depth + 1) for child in item.values())
+        elif isinstance(item, list):
+            pending.extend((child, depth + 1) for child in item)
+
+
 def read_json(path):
     path = Path(path)
     if path.is_symlink():
@@ -38,17 +52,7 @@ def read_json(path):
         if len(raw) > MAX_JSON_BYTES:
             raise MoleError("INVALID_JSON", "JSON exceeds size limit.")
         value = json.loads(raw, object_pairs_hook=unique_object, parse_constant=invalid_constant)
-        pending = [(value, 0)]
-        count = 0
-        while pending:
-            item, depth = pending.pop()
-            count += 1
-            if depth > 64 or count > 200000:
-                raise ValueError("JSON complexity limit")
-            if isinstance(item, dict):
-                pending.extend((child, depth + 1) for child in item.values())
-            elif isinstance(item, list):
-                pending.extend((child, depth + 1) for child in item)
+        check_complexity(value)
         return value
     except (ValueError, RecursionError) as exc:
         raise MoleError("INVALID_JSON", "Malformed or excessively nested JSON.") from exc
@@ -56,6 +60,7 @@ def read_json(path):
 
 def atomic_json(path, value):
     path = Path(path)
+    check_complexity(value)
     encoded = (json.dumps(value, ensure_ascii=True, sort_keys=True, indent=2,
                           allow_nan=False) + "\n").encode()
     if len(encoded) > MAX_JSON_BYTES:
@@ -158,4 +163,11 @@ def load(directory):
                     or not set(task["evidenceIds"]) <= evidence_ids):
                 raise MoleError("STATE_CORRUPT", "Task references or revision are invalid.", 5)
             task_ids.add(task["id"])
+        if "semantic" in scan:
+            semantic = scan["semantic"]
+            if not isinstance(semantic, dict) or set(semantic) != {"scenarios", "businessSteps", "glossary"}:
+                raise MoleError("STATE_CORRUPT", "Invalid authored knowledge groups.", 5)
+            contract({"protocolVersion": "1.0", "taskId": "stored", "baseRevision": state["revision"],
+                      "claims": [], **semantic}, "semantic-patch")
+            validate_model({**scan["model"], **semantic, "diagramViews": []})
     return state

@@ -8,7 +8,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.errors import MoleError
 from molekit.pipeline import start, operate
-from molekit.workspace import load
+from molekit.workspace import load, atomic_json
 
 
 class UpdateTests(unittest.TestCase):
@@ -55,6 +55,18 @@ class UpdateTests(unittest.TestCase):
         result = operate("update", self.workspace)
         self.assertEqual(result["changes"]["changed"], [])
         self.assertEqual(load(self.workspace), before)
+
+    def test_parser_version_change_reopens_semantic_review(self):
+        state = load(self.workspace)
+        state["scan"]["parserVersion"] = "previous-parser"
+        atomic_json(self.workspace / "state.json", state)
+        with self.assertRaises(MoleError) as caught:
+            operate("next", self.workspace)
+        self.assertEqual(caught.exception.code, "TASK_STALE")
+        result = operate("update", self.workspace)
+        self.assertTrue(result["changes"]["parserChanged"])
+        self.assertEqual(result["changes"]["reusedClaims"], 0)
+        self.assertEqual(result["summary"]["pendingTasks"], 2)
 
     def test_exact_rename_retains_symbol_and_process_ids(self):
         before = load(self.workspace)

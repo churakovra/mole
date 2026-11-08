@@ -45,6 +45,13 @@ def documents(model, repo, output, partial=False):
             lines.append("- **" + claim["status"] + "**: " + text(claim["statement"]))
             lines.extend("  - Limitation: " + text(value) for value in claim["limitations"])
             refs.update(claim["evidenceIds"])
+        steps = [step for step in model["businessSteps"] if set(step["operationIds"]) & set(scenario["operationIds"])
+                 and set(step["claimIds"]) <= set(scenario["claimIds"])]
+        if steps:
+            lines.extend(["", "## Business mapping", ""])
+            for step in steps:
+                lines.append("- What: " + text(step["what"]) + ". Why: " + text(step["why"]))
+                lines.append("  - Claim basis: " + ", ".join("`" + cid + "` (" + claims[cid]["status"] + ")" for cid in step["claimIds"]))
         lines.extend(["", "## Outcomes and evidence boundaries", ""])
         lines.extend("- " + text(value) for value in scenario["outcomes"] + scenario["unknowns"])
         lines.extend(["", "## Evidence", ""])
@@ -64,6 +71,13 @@ def documents(model, repo, output, partial=False):
                     "Components below are Python declarations, not a deployment or runtime dependency map.\n"]
     architecture.extend("- " + text(s["qualifiedName"]) + " (`" + text(s["kind"]) + "`)" for s in model["symbols"])
     documents["architecture.md"] = "\n".join(architecture) + "\n"
+    if model["glossary"]:
+        glossary = ["# Glossary", "", heading]
+        for term in model["glossary"]:
+            glossary.extend(["## " + text(term["term"]), "", text(term["definition"]), "",
+                             "Claims: " + ", ".join("`" + cid + "` (" + claims[cid]["status"] + ")" for cid in term["claimIds"]), ""])
+        documents["glossary.md"] = "\n".join(glossary)
+        documents["README.md"] += "\n[Glossary](glossary.md)\n"
     quality = ["# Quality report\n", heading,
                "Schema and reference/provenance checks passed for this snapshot.",
                "Semantic truth, runtime reachability and complete branch coverage are not established.\n"]
@@ -73,6 +87,11 @@ def documents(model, repo, output, partial=False):
         for claim in model["claims"]:
             quality.append("- **" + claim["status"] + "** `" + text(claim["id"]) + "`: " + text(claim["statement"]))
             quality.extend("  - Limitation: " + text(value) for value in claim["limitations"])
+    if model["businessSteps"]:
+        quality.extend(["", "## All business mappings", ""])
+        for step in model["businessSteps"]:
+            quality.append("- `" + step["id"] + "`: " + text(step["what"]) + ". Why: " + text(step["why"]))
+            quality.append("  - Claim basis: " + ", ".join("`" + cid + "` (" + claims[cid]["status"] + ")" for cid in step["claimIds"]))
     documents["quality-report.md"] = "\n".join(quality) + "\n"
     return documents
 

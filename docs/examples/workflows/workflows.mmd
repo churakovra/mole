@@ -1,0 +1,55 @@
+%% mole:generated:start id=workflows.mmd
+%% MOLE snapshot f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c
+%% Losses: nested navigation, evidence drawer, local edits, and full diagram semantics.
+%% Static candidates only; runtime behavior is not verified.
+flowchart LR
+  %% semantic-id event-02064ef929391d7003d9b333
+  n0["tasks.add_task candidate"]
+  %% semantic-id event-02ee436bde1b71b73f0d9aaf
+  n1["asyncio.wait_for candidate"]
+  %% semantic-id event-13b3ffd2cfe97b579b507398
+  n2["Try boundary"]
+  %% semantic-id event-24012ec7d9984642527e4f78
+  n3["session.add candidate"]
+  %% semantic-id event-76c3ae56d0d0eac5e11dd9ca
+  n4["session.commit candidate"]
+  %% semantic-id event-8437d1648f2bda6382108102
+  n5["Async declaration create_order"]
+  %% semantic-id event-b8f3a13297d597adadbaaaab
+  n6["Async declaration deliver"]
+  %% semantic-id event-d6f371983aab0d012155a85b
+  n7["app.post decorator on create_order"]
+  %% semantic-id event-e8ed5ec7b18fa205a3646a78
+  n8["Await boundary"]
+  %% semantic-id event-ee26772bc8a5761b39c6850e
+  n9["exchange.publish candidate"]
+  %% semantic-id event-fb5dcf698f56cebc95d4d412
+  n10["session.rollback candidate"]
+  %% semantic-id event-fcc71187db43213db7a63ad1
+  n11["Raise boundary"]
+  %% semantic-id op-5a2d7d0d5f2a8b06f3a9f8c1
+  n12["app.deliver"]
+  %% semantic-id op-9ee8084d6f275c9356902a56
+  n13["app.create_order"]
+  %% semantic-id scenario-summary-08c0fcfebbc3b468c74792c9
+  n14["Callable review#58; app.create_order"]
+  %% semantic-id symbol-5a2d7d0d5f2a8b06f3a9f8c1
+  n15["app.deliver"]
+  %% semantic-id symbol-9ee8084d6f275c9356902a56
+  n16["app.create_order"]
+  n16 -. "http_entry" .-> n7
+  n16 -. "async_function" .-> n5
+  n15 -. "async_function" .-> n6
+  n16 -. "db_write" .-> n3
+  n16 -. "transaction_boundary" .-> n4
+  n16 -. "background_task" .-> n0
+  n16 -. "transaction_boundary" .-> n10
+  n15 -. "async_boundary" .-> n1
+  n15 -. "publish" .-> n9
+  n16 -. "control_try" .-> n2
+  n16 -. "control_raise" .-> n11
+  n15 -. "control_await" .-> n8
+%% mole:generated:end id=workflows.mmd
+
+%% mole:manual:start
+%% mole:manual:end

@@ -7,14 +7,14 @@ from molekit.adapters import enrich
 from molekit.agent import create_tasks
 from molekit.errors import MoleError
 from molekit.model import validate_model
-from molekit.scanner import identity, inventory, scan
+from molekit.scanner import identity, inventory, scan, PARSER_VERSION
 from molekit.workspace import atomic_json
 
 
 def changes(state, directory):
     if "scan" not in state:
         raise MoleError("INVALID_STATE", "Scan before requesting a diff/update.", 5)
-    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []))
+    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
     before = {item["path"]: item["hash"] for item in state["scan"]["index"]}
     after = {item["path"]: item["hash"] for item in records}
     added, removed = sorted(after.keys() - before.keys()), sorted(before.keys() - after.keys())
@@ -29,7 +29,8 @@ def changes(state, directory):
         elif candidates:
             ambiguous.append(old)
     return {"added": added, "removed": removed, "changed": changed,
-            "renames": renames, "ambiguousRenames": ambiguous}
+            "renames": renames, "ambiguousRenames": ambiguous,
+            "parserChanged": state["scan"].get("parserVersion") != PARSER_VERSION}
 
 
 def retain_renamed_ids(old_scan, new_scan, renames):
@@ -133,9 +134,9 @@ def refresh(state, directory):
     if state["status"] == "EXPORTING":
         raise MoleError("WORKSPACE_CONFLICT", "Resume the interrupted export before updating.", 5)
     report = changes(state, directory)
-    if not any(report[key] for key in ("added", "removed", "changed")):
+    if not report["parserChanged"] and not any(report[key] for key in ("added", "removed", "changed")):
         return state, {**report, "reusedClaims": len(state["scan"]["model"]["claims"]), "invalidatedClaims": []}
-    result = enrich(scan(state["manifest"]["repo"], directory, state["manifest"].get("outputs", [])))
+    result = enrich(scan(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"]))
     retain_renamed_ids(state["scan"], result, report["renames"])
     if report["ambiguousRenames"]:
         result["limitations"].append({"path": ".", "reason": "ambiguous_rename_requires_review"})
@@ -146,9 +147,9 @@ def refresh(state, directory):
     invalidated = []
     for claim in state["scan"]["model"]["claims"]:
         linked = [task for task, ids in state.get("taskClaims", {}).items() if claim["id"] in ids]
-        fresh = set(claim["evidenceIds"]) <= available
+        fresh = not report["parserChanged"] and set(claim["evidenceIds"]) <= available
         if not claim["evidenceIds"]:
-            fresh = bool(linked) and all(any(t["id"] == tid and set(t["evidenceIds"]) == set(old_tasks[tid]["evidenceIds"])
+            fresh = not report["parserChanged"] and bool(linked) and all(any(t["id"] == tid and set(t["evidenceIds"]) == set(old_tasks[tid]["evidenceIds"])
                                              for t in tasks) for tid in linked)
         if fresh:
             reused_claims.append(claim)
@@ -156,6 +157,17 @@ def refresh(state, directory):
             invalidated.append(claim["id"])
     result["model"]["claims"] = reused_claims
     kept = {c["id"] for c in reused_claims}
+    available_operations = {op["id"] for op in result["model"]["operations"]}
+    result["semantic"] = {}
+    invalidated_semantic = []
+    for group in ("scenarios", "businessSteps", "glossary"):
+        result["semantic"][group] = []
+        for entity in state["scan"].get("semantic", {}).get(group, []):
+            if set(entity["claimIds"]) <= kept and set(entity.get("operationIds", [])) <= available_operations:
+                result["semantic"][group].append(entity)
+                result["model"][group].append(entity)
+            else:
+                invalidated_semantic.append(entity["id"])
     for task in tasks:
         old = old_tasks.get(task["id"])
         claims = state.get("taskClaims", {}).get(task["id"], [])
@@ -172,7 +184,7 @@ def refresh(state, directory):
     updated.update(scan=result, revision=result["model"]["revision"], tasks=tasks, submissions={},
                    taskClaims={tid: [cid for cid in ids if cid in kept] for tid, ids in state.get("taskClaims", {}).items()},
                    status="NEEDS_ANALYSIS" if any(t["status"] == "pending" for t in tasks) else "VALIDATING")
-    report.update(reusedClaims=len(reused_claims), invalidatedClaims=invalidated)
+    report.update(reusedClaims=len(reused_claims), invalidatedClaims=invalidated, invalidatedSemanticIds=invalidated_semantic)
     updated["changeReport"] = report
     atomic_json(directory / "state.json", updated)
     return updated, report

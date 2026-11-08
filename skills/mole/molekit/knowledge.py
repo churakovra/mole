@@ -7,6 +7,7 @@ from molekit.scanner import identity
 
 def compose(scan):
     model = scan["model"]
+    model["operations"] = [op for op in model["operations"] if op["kind"] != "scenario_summary"]
     # Derived views are regenerated; semantic claims remain canonical.
     for group in ("scenarios", "businessSteps", "diagramViews", "glossary", "qualityFindings"):
         model[group] = []
@@ -61,6 +62,25 @@ def compose(scan):
             "nodes": [{"id": operation["id"], "label": operation["title"]}], "edgeIds": [], "childRefs": []})
         overview["scenarioIds"].append(sid)
         overview["nodes"].append({"id": operation["id"], "label": operation["title"]})
+        overview["childRefs"].append(vid)
+    authored = scan.get("semantic", {})
+    model["businessSteps"].extend(authored.get("businessSteps", []))
+    model["glossary"].extend(authored.get("glossary", []))
+    for scenario in authored.get("scenarios", []):
+        evidence_ids = sorted({ev for oid in scenario["operationIds"] for ev in operations[oid]["evidenceIds"]})
+        summary_id = identity("scenario-summary", scenario["id"])
+        model["operations"].append({"id": summary_id, "title": scenario["title"], "kind": "scenario_summary", "evidenceIds": evidence_ids})
+        derived = {**scenario, "operationIds": [summary_id, *scenario["operationIds"]]}
+        model["scenarios"].append(derived)
+        vid = identity("view", scenario["id"])
+        model["diagramViews"].append({"id": vid, "title": scenario["title"], "scenarioIds": [scenario["id"]],
+            "nodes": [{"id": summary_id, "label": scenario["title"]}] +
+                     [{"id": oid, "label": operations[oid]["title"]} for oid in scenario["operationIds"]],
+            "edgeIds": [edge["id"] for edge in model["relationships"] if
+                        edge["source"] in scenario["operationIds"] and edge["target"] in scenario["operationIds"]],
+            "childRefs": []})
+        overview["scenarioIds"].append(scenario["id"])
+        overview["nodes"].append({"id": summary_id, "label": scenario["title"]})
         overview["childRefs"].append(vid)
     if overview["nodes"]:
         model["diagramViews"].insert(0, overview)

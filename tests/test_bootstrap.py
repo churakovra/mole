@@ -80,6 +80,12 @@ class InstalledSkillTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Static analysis", result.stdout)
 
+    def test_incomplete_payload_returns_structured_error(self):
+        (self.installed / "molekit/errors.py").unlink()
+        result = self.run_cli("doctor", "--json")
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
+
     def test_installed_scan_offline_without_target_execution(self):
         (self.cwd / "app.py").write_text("raise RuntimeError('target code executed')\ndef f(): return 1\n")
         workspace = self.root / "workspace"

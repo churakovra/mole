@@ -45,7 +45,12 @@ def start(repo, workspace, mode, scope):
     from molekit.safety import confined_output
     confined_output(repo, workspace)
     if scope != "repository":
-        raise MoleError("UNSUPPORTED_SCOPE", "This version accepts --scope repository only; describe narrower goals in semantic tasks.")
+        scoped = Path(scope)
+        if scoped.is_absolute() or ".." in scoped.parts or "\\" in scope:
+            raise MoleError("UNSAFE_SCOPE", "Scope must be a repository-relative file or directory.")
+        if not (repo / scoped).exists() or (repo / scoped).is_symlink() or not (repo / scoped).resolve().is_relative_to(repo):
+            raise MoleError("UNSAFE_SCOPE", "Scope must exist inside the repository without a symlink escape.")
+        scope = scoped.as_posix()
     manifest = {"repo": str(repo), "mode": mode, "scope": scope,
                 "engineVersion": __version__}
     with locked(workspace, create=True) as directory:
@@ -72,7 +77,7 @@ def advance(state, directory):
     from molekit.scanner import scan
     transition(state, "SCANNING")
     atomic_json(directory / "state.json", state)
-    result = scan(state["manifest"]["repo"], directory)
+    result = scan(state["manifest"]["repo"], directory, scope=state["manifest"]["scope"])
     from molekit.adapters import enrich
     enrich(result)
     transition(state, "EXTRACTING")
@@ -184,6 +189,10 @@ def finish(state, directory, output, allow_partial, formats=None):
         for key in ("added", "removed", "changed", "invalidatedClaims", "ambiguousRenames"):
             lines.extend(["## " + key, "", *["- " + text(item) for item in report[key]], ""])
         lines.extend(["Reused claims: " + str(report["reusedClaims"]), "", "Renames: " + text(report["renames"]), ""])
+        if report.get("invalidatedSemanticIds"):
+            lines.extend(["## Invalidated authored meaning", "", *["- " + text(identity) for identity in report["invalidatedSemanticIds"]], ""])
+        if report.get("parserChanged"):
+            lines.extend(["Parser version changed; semantic review was reopened.", ""])
         generated["change-report.md"] = "\n".join(lines)
     if "html" in formats:
         from molekit.html import render

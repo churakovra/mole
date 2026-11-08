@@ -5,7 +5,7 @@ from pathlib import Path
 
 from molekit.errors import MoleError
 from molekit.model import contract, validate_model
-from molekit.scanner import identity, inventory, redact, redacted_lines, sha
+from molekit.scanner import identity, inventory, redact, redacted_lines, sha, PARSER_VERSION
 from molekit.safety import read_source
 
 
@@ -44,7 +44,9 @@ def create_tasks(scan, mode):
 
 
 def ensure_fresh(state, directory):
-    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []))
+    if state["scan"].get("parserVersion") != PARSER_VERSION:
+        raise MoleError("TASK_STALE", "Parser version changed; update before continuing.", 5, "Run update.")
+    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
     current = [{"path": r["path"], "hash": r["hash"]} for r in records]
     if current != state["scan"]["index"]:
         raise MoleError("TASK_STALE", "Source snapshot changed; update/rescan before submitting.", 5,
@@ -64,7 +66,17 @@ def inspect(state, task, budget, cursor):
     lookup = {e["id"]: e for e in model["evidence"]}
     sources = {s["id"]: s for s in model["sources"]}
     repo = Path(state["manifest"]["repo"]).resolve()
+    operations = [{"id": op["id"], "title": op["title"][:200]} for op in model["operations"]
+                  if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])]
     result = {"taskId": task["id"], "baseRevision": state["revision"], "context": [], "nextCursor": None}
+    if evidence_index == 0 and line_offset == 0:
+        result["operations"] = []
+        for operation in operations:
+            candidate = {**result, "operations": result["operations"] + [operation]}
+            if len(json.dumps(candidate)) > budget // 3:
+                break
+            result["operations"].append(operation)
+        result["operationsTruncated"] = len(result["operations"]) != len(operations)
     for index in range(evidence_index, len(task["evidenceIds"])):
         evidence = lookup[task["evidenceIds"][index]]
         source = sources[evidence["sourceId"]]
@@ -114,7 +126,31 @@ def accept_patch(state, task, patch):
             if redact(text) != text:
                 raise MoleError("SENSITIVE_INPUT", "Patch contains sensitive-looking content.")
     candidate = {**state["scan"]["model"], "claims": state["scan"]["model"]["claims"] + patch["claims"]}
+    claim_ids = {claim["id"] for claim in patch["claims"]}
+    allowed_operations = {op["id"] for op in candidate["operations"]
+                          if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])}
+    for group in ("scenarios", "businessSteps", "glossary"):
+        additions = patch.get(group, [])
+        for entity in additions:
+            if not entity["id"].startswith("semantic-"):
+                raise MoleError("INVALID_ID", "Authored scenario/business/glossary IDs must start with semantic-.")
+            if not entity["claimIds"] or not set(entity["claimIds"]) <= claim_ids:
+                raise MoleError("INSUFFICIENT_EVIDENCE", "Authored meaning must cite claims from its submitted task.")
+            if group != "glossary" and (not entity["operationIds"] or not set(entity["operationIds"]) <= allowed_operations):
+                raise MoleError("INSUFFICIENT_EVIDENCE", "Authored scenario/step operations must belong to task evidence.")
+            if group != "glossary" and len(entity["operationIds"]) != len(set(entity["operationIds"])):
+                raise MoleError("INVALID_ID", "Duplicate authored operation references.")
+            if group == "scenarios" and not entity["outcomes"] and not entity["unknowns"]:
+                raise MoleError("INSUFFICIENT_EVIDENCE", "Scenario requires an outcome or explicit evidence boundary.")
+            for value in entity.values():
+                values = value if isinstance(value, list) else [value]
+                if any(isinstance(text, str) and redact(text) != text for text in values):
+                    raise MoleError("SENSITIVE_INPUT", "Authored field contains sensitive-looking content.")
+        candidate[group] = candidate[group] + additions
     validate_model(candidate)
     state["scan"]["model"] = candidate
+    authored = state["scan"].setdefault("semantic", {group: [] for group in ("scenarios", "businessSteps", "glossary")})
+    for group in authored:
+        authored[group].extend(patch.get(group, []))
     state.setdefault("taskClaims", {})[task["id"]] = [claim["id"] for claim in patch["claims"]]
     task["status"] = "completed"
