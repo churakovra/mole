@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:semantic-patch:v1",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "taskId": {
+      "type": "string"
+    },
+    "baseRevision": {
+      "type": "string"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "source_observed",
+              "runtime_verified",
+              "documented_intent",
+              "inferred",
+              "unknown",
+              "contradicted"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "status",
+          "evidenceIds",
+          "limitations"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "taskId",
+    "baseRevision",
+    "claims"
+  ],
+  "additionalProperties": false
+}
