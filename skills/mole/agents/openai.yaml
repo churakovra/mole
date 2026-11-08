@@ -1,0 +1,4 @@
+interface:
+  display_name: "MOLE"
+  short_description: "Check the bundled MOLE runtime readiness"
+  default_prompt: "Use $mole to check whether the bundled runtime is ready."
