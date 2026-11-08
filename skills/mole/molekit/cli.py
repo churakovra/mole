@@ -48,6 +48,7 @@ def main(argv=None):
         if name == "inspect":
             command.add_argument("--task", required=True)
             command.add_argument("--budget-chars", type=int, default=12000)
+            command.add_argument("--cursor", default="0:0")
         if name == "submit":
             command.add_argument("--input", required=True)
         if name == "finish":
@@ -87,6 +88,9 @@ def main(argv=None):
         except OSError:
             failure("IO_ERROR", "Filesystem operation failed.", "Check paths, disk space, and permissions.")
             return 4
+        except Exception:
+            failure("INTERNAL_ERROR", "Unexpected engine failure.", "Preserve the workspace and report this error.")
+            return 10
 
     result = {
         "protocolVersion": "1.0", "status": "READY", "nextAction": "start",

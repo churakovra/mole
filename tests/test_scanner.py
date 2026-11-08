@@ -82,5 +82,5 @@ class ScannerTests(unittest.TestCase):
         (self.repo / "app.py").write_text("def f(): return 1\n")
         start(self.repo, self.workspace, "standard", "repository")
         result = operate("next", self.workspace)
-        self.assertEqual(result["status"], "VALIDATING")
+        self.assertEqual(result["status"], "NEEDS_ANALYSIS")
         self.assertIsNotNone(result["revision"])

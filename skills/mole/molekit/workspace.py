@@ -86,7 +86,7 @@ def locked(directory, create=False):
 
 def load(directory):
     state = read_json(Path(directory) / "state.json")
-    if not isinstance(state, dict) or state.get("schemaVersion") != 1:
+    if not isinstance(state, dict) or type(state.get("schemaVersion")) is not int or state["schemaVersion"] != 1:
         raise MoleError("SCHEMA_MISMATCH", "Unsupported workspace schema.")
     from molekit.pipeline import STATES
     if (not isinstance(state.get("status"), str) or state["status"] not in STATES
@@ -103,4 +103,26 @@ def load(directory):
             or any(not isinstance(k, str) or not isinstance(v, str)
                    for k, v in state["submissions"].items())):
         raise MoleError("STATE_CORRUPT", "Workspace state is invalid.", 5)
+    if (state["status"] not in {"NEW", "SCANNING", "BLOCKED", "FAILED"}
+            or state["tasks"] or state["submissions"]) and "scan" not in state:
+        raise MoleError("STATE_CORRUPT", "Advanced session is missing its scan.", 5)
+    if "scan" in state:
+        from molekit.model import contract, validate_model
+        scan = state["scan"]
+        if (not isinstance(scan, dict) or not isinstance(scan.get("model"), dict)
+                or not isinstance(scan.get("index"), list)
+                or any(not isinstance(item, dict) or not isinstance(item.get("path"), str)
+                       or not isinstance(item.get("hash"), str) for item in scan["index"])):
+            raise MoleError("STATE_CORRUPT", "Workspace scan is invalid.", 5)
+        validate_model(scan["model"])
+        if state["revision"] != scan["model"]["revision"]:
+            raise MoleError("STATE_CORRUPT", "Workspace revisions disagree.", 5)
+        task_ids = set()
+        evidence_ids = {ev["id"] for ev in scan["model"]["evidence"]}
+        for task in state["tasks"]:
+            contract(task, "task")
+            if (task["id"] in task_ids or task["baseRevision"] != state["revision"]
+                    or not set(task["evidenceIds"]) <= evidence_ids):
+                raise MoleError("STATE_CORRUPT", "Task references or revision are invalid.", 5)
+            task_ids.add(task["id"])
     return state

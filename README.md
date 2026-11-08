@@ -79,3 +79,13 @@ and branch boundaries. These are name-based candidates with source evidence,
 not proof of dispatch, ordering, transaction scope, retries, or delivery guarantees.
 Bounded forward/backward traces terminate cycles and report evidence boundaries.
 Dynamic DI and broker configuration still require agent review.
+
+### Agent task loop (PR-06)
+
+After scanning, `next` returns a pending semantic task. Follow the bundled
+[agent protocol](skills/mole/references/agent-protocol.md) to inspect bounded,
+paginated source context and submit revision-bound claims. Submission validates
+the patch shape, task-linked evidence, provenance, and current source hashes.
+Identical submissions are idempotent; different replacements conflict. A stale
+source requires rescan/update rather than accepting old analysis. Oversized
+inspection metadata returns INVALID_BUDGET instead of exceeding the limit.

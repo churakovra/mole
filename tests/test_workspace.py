@@ -60,7 +60,8 @@ class WorkspaceTests(unittest.TestCase):
         self.start()
         baseline = load(self.workspace)
         for field, value in [("status", []), ("runId", None), ("tasks", [0]),
-                             ("manifest", {}), ("submissions", {"a": 1})]:
+                             ("manifest", {}), ("submissions", {"a": 1}),
+                             ("tasks", [{"id": "bad", "status": "pending"}])]:
             with self.subTest(field=field):
                 state = {**baseline, field: value}
                 atomic_json(self.workspace / "state.json", state)
@@ -108,13 +109,11 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(operate("status", self.workspace)["status"], "NEW")
 
     def test_duplicate_and_stale_submission(self):
+        (self.repo / "app.py").write_text("def f(): return 1\n")
         self.start()
-        state = load(self.workspace)
-        state.update(status="NEEDS_ANALYSIS", revision="a",
-                     tasks=[{"id": "task-1", "status": "pending"}])
-        atomic_json(self.workspace / "state.json", state)
+        task = operate("next", self.workspace)["task"]
         path = Path(self.temp.name) / "patch.json"
-        path.write_text(json.dumps({"taskId": "task-1", "baseRevision": "b"}))
+        path.write_text(json.dumps({"taskId": task["id"], "baseRevision": "b"}))
         with self.assertRaises(MoleError) as caught:
             operate("submit", self.workspace, input=path)
         self.assertEqual(caught.exception.code, "TASK_STALE")
