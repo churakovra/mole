@@ -12,3 +12,5 @@ Current scope: PR-02, persistent workspace and CLI protocol.
 
 External checks not run: CI OS/Python matrix, Confluence, agent model evals.
 Skill creator quick validator could not run because PyYAML is unavailable.
+
+| 02 | feature/pr-02-workspace-protocol | Implemented; awaiting acceptance | 15 tests pass; independent review finding repaired and re-reviewed |

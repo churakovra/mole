@@ -44,3 +44,14 @@ CI defines Python 3.11 and 3.14 checks on Linux, macOS, and Windows.
 The skill payload owns all runtime imports. Tests and CI stay at repository level.
 Version `0.1.0.dev1` identifies this bootstrap; it is not the planned `1.0.0` release.
 Licensed under Apache-2.0; see [LICENSE](LICENSE).
+
+### Persistent sessions (PR-02)
+
+`start --repo PATH --workspace PATH [--mode quick|standard|deep]` creates a
+session; repeating the same request resumes it. `status --workspace PATH`
+reports the checkpoint. Workflow commands emit a versioned JSON envelope.
+State is stored atomically in `state.json`, including the manifest; `.lock`
+uses an OS-owned lock released on exit/crash. The state file is authoritative.
+`next`, `inspect`, `submit`, and `finish` are reserved workflow boundaries;
+source extraction, semantic validation, and export are enabled by later PRs.
+They return explicit errors until their respective implementations are present.
