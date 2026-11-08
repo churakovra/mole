@@ -95,6 +95,9 @@ def operate(command, workspace, **options):
                 from molekit.agent import ensure_fresh
                 ensure_fresh(state, directory)
             pending = [t for t in state["tasks"] if t.get("status") == "pending"]
+            if state["status"] == "PARTIAL" and pending:
+                transition(state, "NEEDS_ANALYSIS")
+                atomic_json(directory / "state.json", state)
             return {**summary(state), "task": pending[0] if pending else None}
         if command == "inspect":
             task = next((t for t in state["tasks"] if t["id"] == options["task"]), None)
@@ -119,6 +122,8 @@ def operate(command, workspace, **options):
             task = next((t for t in state["tasks"] if t["id"] == task_id), None)
             if task is None:
                 raise MoleError("TASK_UNKNOWN", "Task does not exist.")
+            if state["status"] == "PARTIAL" and task["status"] == "pending":
+                transition(state, "NEEDS_ANALYSIS")
             if state["status"] != "NEEDS_ANALYSIS" or patch.get("baseRevision") != state["revision"]:
                 raise MoleError("TASK_STALE", "Patch does not match active revision.", 5)
             accept_patch(state, task, patch)
@@ -129,5 +134,56 @@ def operate(command, workspace, **options):
             atomic_json(directory / "state.json", state)
             return summary(state)
         if command == "finish":
-            raise MoleError("QUALITY_GATE_FAILED", "This run has no validated knowledge to export.", 6)
+            return finish(state, directory, options["output"], options.get("allow_partial", False))
         raise MoleError("INVALID_REQUEST", "Unknown operation.")
+
+
+def finish(state, directory, output, allow_partial):
+    from molekit.agent import ensure_fresh
+    from molekit.knowledge import compose
+    from molekit.markdown import documents, plan_writes, atomic_text
+    if "scan" not in state:
+        raise MoleError("QUALITY_GATE_FAILED", "Run next before exporting.", 6)
+    pending = any(t["status"] == "pending" for t in state["tasks"])
+    partial = pending or any(limitation["reason"] != "excluded_class" for limitation in state["scan"]["limitations"])
+    if partial and not allow_partial:
+        raise MoleError("QUALITY_GATE_FAILED", "Pending tasks or coverage limits require --allow-partial.", 6)
+    ensure_fresh(state, directory)
+    model = compose(state["scan"])
+    output = Path(output).absolute()
+    if output.resolve() == Path(state["manifest"]["repo"]).resolve() or output.resolve() == directory.resolve():
+        raise MoleError("UNSAFE_PATH", "Use a dedicated output subdirectory or external directory.")
+    if any((Path(state["manifest"]["repo"]) / item["path"]).resolve().is_relative_to(output.resolve())
+           for item in state["scan"]["index"]):
+        raise MoleError("UNSAFE_PATH", "Output directory contains indexed input sources; use a dedicated empty directory.")
+    old_output = state.get("output")
+    previous = state.get("exportBases", {}) if old_output == str(output) else {}
+    if state.get("pendingExport", {}).get("output") == str(output):
+        previous = {key: [previous.get(key), value]
+                    for key, value in state["pendingExport"]["bases"].items()}
+    generated = documents(model, state["manifest"]["repo"], output, partial)
+    writes, bases = plan_writes(output, generated, previous)
+    # Mark the journal before touching output. Interrupted exports can resume
+    # from generated content without mistaking it for an authored edit.
+    state["pendingExport"] = {"output": str(output), "bases": bases}
+    if state["status"] == "NEEDS_ANALYSIS":
+        transition(state, "VALIDATING")
+    if state["status"] != "EXPORTING":
+        transition(state, "EXPORTING")
+    output_resolved = output.resolve()
+    repo = Path(state["manifest"]["repo"]).resolve()
+    if output_resolved.is_relative_to(repo):
+        relative = output_resolved.relative_to(repo).as_posix() + "/"
+        state["scan"]["index"] = [r for r in state["scan"]["index"] if not r["path"].startswith(relative)]
+    state["manifest"].setdefault("outputs", [])
+    if str(output_resolved) not in state["manifest"]["outputs"]:
+        state["manifest"]["outputs"].append(str(output_resolved))
+    atomic_json(directory / "state.json", state)
+    for path, content in writes.items():
+        atomic_text(path, content)
+    atomic_json(directory / "knowledge-model.json", model)
+    state.update(exportBases=bases, output=str(output))
+    state.pop("pendingExport", None)
+    transition(state, "PARTIAL" if partial else "COMPLETED")
+    atomic_json(directory / "state.json", state)
+    return {**summary(state), "output": str(output), "files": sorted(generated)}

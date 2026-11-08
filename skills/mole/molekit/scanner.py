@@ -59,9 +59,10 @@ def ignored(path, rules, is_dir=False):
     return result
 
 
-def inventory(repo, workspace):
+def inventory(repo, workspace, excluded=()):
     root = Path(repo).resolve()
     workspace = Path(workspace).resolve()
+    excluded = {Path(p).resolve() for p in excluded}
     records, limitations = [], []
     started = time.monotonic()
 
@@ -84,6 +85,8 @@ def inventory(repo, workspace):
             relative = child.relative_to(root).as_posix()
             if child.is_symlink():
                 limitations.append({"path": relative, "reason": "symlink_excluded"})
+                continue
+            if child.resolve() in excluded:
                 continue
             if child.resolve() == workspace or child.name in IGNORED or child.name in SECRET_NAMES or child.name.startswith(".env"):
                 limitations.append({"path": relative, "reason": "excluded_class"})

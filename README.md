@@ -89,3 +89,16 @@ the patch shape, task-linked evidence, provenance, and current source hashes.
 Identical submissions are idempotent; different replacements conflict. A stale
 source requires rescan/update rather than accepting old analysis. Oversized
 inspection metadata returns INVALID_BUDGET instead of exceeding the limit.
+
+### Knowledge and Markdown (PR-07)
+
+`finish --workspace PATH --output PATH --json` compiles a process catalog,
+architecture inventory, process pages, and quality report from the same SKM.
+Pending tasks/coverage limits require explicit `--allow-partial`; pending tasks
+remain resumable after a partial export. Process ordering and business intent
+are explained only to the extent supported by accepted claims.
+Use a dedicated output directory that does not contain indexed inputs.
+Generated sections are checked against their recorded base digest before an
+update; authored changes conflict rather than being overwritten. Manual text
+outside generated markers is preserved. An export journal permits interrupted
+writes to resume. Unassociated accepted claims remain in the quality report.

@@ -35,7 +35,7 @@ def create_tasks(scan, mode):
 
 
 def ensure_fresh(state, directory):
-    records, _ = inventory(state["manifest"]["repo"], directory)
+    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []))
     current = [{"path": r["path"], "hash": r["hash"]} for r in records]
     if current != state["scan"]["index"]:
         raise MoleError("TASK_STALE", "Source snapshot changed; update/rescan before submitting.", 5,
