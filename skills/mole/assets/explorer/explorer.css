@@ -36,3 +36,7 @@ svg { display: block; }
 footer { padding: 1rem; font-size: .8rem; color: #4f6254; }
 @media (max-width: 768px) { main { grid-template-columns: minmax(0, 1fr); } aside { border-right: none; } nav { max-height: 10rem; overflow: auto; } header span { display: none; } .toolbar { flex-wrap: wrap; } h1 { min-width: 45%; } }
 @media (max-width: 600px) { .toolbar h1 { order: -1; flex-basis: 100%; } }
+dialog { max-width: min(90vw, 36rem); border: 1px solid #607c63; border-radius: .5rem; padding: 1.2rem; }
+dialog::backdrop { background: #10251b66; }
+dialog textarea { display: block; width: 100%; min-height: 9rem; margin: .7rem 0; font: inherit; padding: .5rem; }
+dialog button { margin-right: .5rem; }

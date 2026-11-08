@@ -163,7 +163,7 @@ def finish(state, directory, output, allow_partial):
                     for key, value in state["pendingExport"]["bases"].items()}
     generated = documents(model, state["manifest"]["repo"], output, partial)
     from molekit.html import render
-    generated["explorer.html"] = render(model, partial)
+    generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(output.resolve()))[:24])
     writes, bases = plan_writes(output, generated, previous)
     # Mark the journal before touching output. Interrupted exports can resume
     # from generated content without mistaking it for an authored edit.

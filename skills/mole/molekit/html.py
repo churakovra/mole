@@ -5,12 +5,14 @@ from pathlib import Path
 from molekit.layout import layout
 
 
-def render(model, partial=False):
+def render(model, partial=False, artifact_id="local-explorer"):
     assets = Path(__file__).resolve().parents[1] / "assets" / "explorer"
     css = (assets / "explorer.css").read_text(encoding="utf-8")
     script = (assets / "explorer.js").read_text(encoding="utf-8")
     data = json.dumps(model, ensure_ascii=True).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     layouts = json.dumps({view["id"]: layout(model, view) for view in model["diagramViews"]}, ensure_ascii=True).replace("<", "\\u003c")
+    config = json.dumps({"artifactId": artifact_id}).replace("<", "\\u003c")
+    overrides = (assets / "overrides.js").read_text(encoding="utf-8")
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
@@ -25,4 +27,4 @@ def render(model, partial=False):
 <div id="viewport" tabindex="0" aria-label="Scrollable workflow diagram"><svg id="diagram" role="group" aria-label="Workflow diagram"></svg></div>
 <section id="details" tabindex="-1" aria-label="Selection details"><h2>Select a node or connector</h2><p>Double-click a process to open its details. Use Back to return to its parent.</p></section>
 </section></main><footer>Local artifact · edits, when available, remain in this browser</footer>
-<script id="mole-model" type="application/json">""" + data + "</script><script id=\"mole-layouts\" type=\"application/json\">" + layouts + "</script><script>" + script + "</script></body></html>\n"
+<script id="mole-model" type="application/json">""" + data + "</script><script id=\"mole-config\" type=\"application/json\">" + config + "</script><script id=\"mole-layouts\" type=\"application/json\">" + layouts + "</script><script>" + overrides + "</script><script>" + script + "</script></body></html>\n"

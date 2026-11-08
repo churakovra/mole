@@ -121,3 +121,14 @@ scrolling does not change zoom. Mouse background drag pans with pointer capture;
 touch uses native scrolling. Browser tests use Chrome DevTools to enforce exact
 390/600/768/1280/1920 CSS-pixel viewports and check geometry and page overflow.
 The development-only harness needs Node and Chrome; the installed skill does not.
+
+### Browser-local edits (PR-10)
+
+Double-click a node/edge label, selected description/notes, or glossary field to
+edit; F2 is the keyboard equivalent. Edits use `mole:<artifactId>:v1` localStorage
+records with field IDs, generated base hashes, revision and timestamps. Compatible
+regeneration retains edits; changed generated fields keep authored values with a
+visible conflict warning. Malformed/blocked/quota-limited storage is reported;
+a failed save remains in memory and does not replace the last persisted store.
+Browser edits are not shared editing and do not modify Markdown or canonical SKM.
+Moving files/origins or using another browser may change localStorage availability.

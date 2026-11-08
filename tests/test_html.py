@@ -35,15 +35,18 @@ class ResultParser(HTMLParser):
             self.result += data
 
 
-def browser_test(document, script, directory, width=1280, screenshot=None):
+def browser_test(document, script, directory, width=1280, screenshot=None, prelude=""):
     path = Path(directory) / "explorer.html"
-    harness = '''<script>setTimeout(() => { let result; try {
+    script = script.replace("</script", "<\\/script")
+    prelude = prelude.replace("</script", "<\\/script")
+    harness = '''<script>setTimeout(async () => { let result; try {
 const check = (condition, message) => {if (!condition) throw new Error(message);};
 ''' + 'check(innerWidth === ' + str(width) + ', \"incorrect viewport width\");' + script + '''
 result = {ok:true}; } catch(error) {result={ok:false,error:String(error)};}
 const output=document.createElement('pre'); output.id='test-results';
 output.textContent=JSON.stringify(result); document.body.append(output);
 },100);</script>'''
+    document = document.replace('<script id="mole-model"', "<script>" + prelude + "</script><script id=\"mole-model\"", 1)
     path.write_text(document.replace("</body>", harness + "</body>"), encoding="utf-8")
     command = ["node", str(Path(__file__).with_name("browser_runner.js")), BROWSER,
                str(directory), str(path), str(width), str(screenshot) if screenshot else ""]
