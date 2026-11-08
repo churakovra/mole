@@ -111,3 +111,13 @@ process tree/search, node/connector selection, evidence details, nested views,
 leaf-safe double click, and Back along the actual containment route. Keyboard
 Enter selects, ArrowRight drills, and Alt+ArrowLeft returns. A restrictive CSP
 blocks connections; user strings are rendered as text nodes.
+
+### Layout and navigation (PR-09)
+
+HTML and diagram exporters share a deterministic bounded grid layout with
+wrapped labels and exterior connector lanes. Dense graphs warn about possible
+crossings and remain locally scrollable. Zoom is relative to Fit=100%; wheel
+scrolling does not change zoom. Mouse background drag pans with pointer capture;
+touch uses native scrolling. Browser tests use Chrome DevTools to enforce exact
+390/600/768/1280/1920 CSS-pixel viewports and check geometry and page overflow.
+The development-only harness needs Node and Chrome; the installed skill does not.

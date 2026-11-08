@@ -39,19 +39,15 @@ def browser_test(document, script, directory, width=1280, screenshot=None):
     path = Path(directory) / "explorer.html"
     harness = '''<script>setTimeout(() => { let result; try {
 const check = (condition, message) => {if (!condition) throw new Error(message);};
-''' + script + '''
+''' + 'check(innerWidth === ' + str(width) + ', \"incorrect viewport width\");' + script + '''
 result = {ok:true}; } catch(error) {result={ok:false,error:String(error)};}
 const output=document.createElement('pre'); output.id='test-results';
 output.textContent=JSON.stringify(result); document.body.append(output);
 },100);</script>'''
     path.write_text(document.replace("</body>", harness + "</body>"), encoding="utf-8")
-    command = [BROWSER, "--headless", "--no-first-run", "--disable-background-networking",
-               "--disable-component-update", "--disable-sync", "--disable-default-apps", "--disable-extensions",
-               "--host-resolver-rules=MAP * ~NOTFOUND", "--user-data-dir=" + str(Path(directory) / "profile"),
-               "--window-size=" + str(width) + ",844", "--virtual-time-budget=1500", "--dump-dom"]
-    if screenshot:
-        command.append("--screenshot=" + str(screenshot))
-    result = subprocess.run([*command, path.as_uri()], capture_output=True, text=True, timeout=25)
+    command = ["node", str(Path(__file__).with_name("browser_runner.js")), BROWSER,
+               str(directory), str(path), str(width), str(screenshot) if screenshot else ""]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=25)
     parser = ResultParser()
     parser.feed(result.stdout)
     if result.returncode != 0 or not parser.result:

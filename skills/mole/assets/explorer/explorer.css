@@ -21,6 +21,8 @@ nav button[aria-current="page"] { background: #dce8cf; border-color: #183c31; }
 h1 { flex: 1; font-size: 1.15rem; margin: 0; overflow-wrap: anywhere; }
 #viewport { height: 55vh; min-height: 18rem; overflow: auto; border: 1px solid #b6c4b3; border-radius: .5rem; background: #fff; position: relative; }
 svg { display: block; }
+#viewport { touch-action: pan-x pan-y; overscroll-behavior: contain; }
+#viewport.dragging { cursor: grabbing; user-select: none; }
 .node rect { fill: #f2f6ec; stroke: #607c63; stroke-width: 1.5; }
 .node.selected rect { fill: #ffe7ae; stroke: #835a00; stroke-width: 3; }
 .node text { fill: #183c31; font-size: 13px; }
@@ -33,3 +35,4 @@ svg { display: block; }
 #details h2 { margin-top: 0; font-size: 1.1rem; }
 footer { padding: 1rem; font-size: .8rem; color: #4f6254; }
 @media (max-width: 768px) { main { grid-template-columns: minmax(0, 1fr); } aside { border-right: none; } nav { max-height: 10rem; overflow: auto; } header span { display: none; } .toolbar { flex-wrap: wrap; } h1 { min-width: 45%; } }
+@media (max-width: 600px) { .toolbar h1 { order: -1; flex-basis: 100%; } }

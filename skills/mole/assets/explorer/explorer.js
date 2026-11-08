@@ -1,12 +1,14 @@
 "use strict";
 (() => {
   const model = JSON.parse(document.getElementById("mole-model").textContent);
+  const layouts = JSON.parse(document.getElementById("mole-layouts").textContent);
   const $ = id => document.getElementById(id);
   const ns = "http://www.w3.org/2000/svg";
   const views = new Map(model.diagramViews.map(v => [v.id, v]));
   const entities = new Map(["symbols", "operations", "relationships", "claims", "scenarios", "glossary"].flatMap(k => model[k].map(x => [x.id, x])));
   const evidence = new Map(model.evidence.map(x => [x.id, x]));
   const sources = new Map(model.sources.map(x => [x.id, x]));
+  const baseWarning = $("warning").textContent;
   let route = views.size ? [model.diagramViews[0].id] : [];
   let selected = null;
   let zoom = 1;
@@ -106,9 +108,11 @@
     const view = views.get(route[route.length - 1]);
     if (!view) { $("title").textContent = "No supported diagram views"; return; }
     $("title").textContent = view.title;
-    const positions = new Map(view.nodes.map((node, index) => [node.id, { x: 40 + (index % 3) * 260, y: 40 + Math.floor(index / 3) * 160 }]));
-    baseWidth = Math.min(3, Math.max(1, view.nodes.length)) * 260 + 40;
-    baseHeight = Math.max(1, Math.ceil(view.nodes.length / 3)) * 160 + 40;
+    const geometry = layouts[view.id];
+    const positions = new Map(Object.entries(geometry.nodes));
+    baseWidth = geometry.width;
+    baseHeight = geometry.height;
+    $("warning").textContent = baseWarning + (geometry.warning ? " " + geometry.warning : "");
     diagram.setAttribute("viewBox", "0 0 " + baseWidth + " " + baseHeight);
     const defs = svg("defs", {}, diagram);
     const marker = svg("marker", { id: "arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
@@ -117,10 +121,10 @@
       const edge = entities.get(edgeId), a = edge && positions.get(edge.source), b = edge && positions.get(edge.target);
       if (!a || !b) continue;
       const group = svg("g", { class: "edge", "data-id": edge.id, tabindex: 0, role: "button", "aria-label": edge.kind }, diagram);
-      const path = "M " + (a.x + 200) + " " + (a.y + 40) + " C " + (a.x + 240) + " " + (a.y + 40) + "," + (b.x - 40) + " " + (b.y + 40) + "," + b.x + " " + (b.y + 40);
+      const path = geometry.edges[edgeId].d;
       svg("path", { d: path, "marker-end": "url(#arrow)" }, group);
       svg("path", { d: path, class: "hit" }, group);
-      const label = svg("text", { x: (a.x + b.x + 200) / 2, y: (a.y + b.y) / 2 + 28, "text-anchor": "middle" }, group);
+      const label = svg("text", { x: geometry.edges[edgeId].x, y: geometry.edges[edgeId].y, "text-anchor": "middle" }, group);
       label.textContent = edge.kind;
       group.addEventListener("click", () => select(edge.id));
       group.addEventListener("keydown", event => { if (event.key === "Enter") select(edge.id); });
@@ -128,11 +132,11 @@
     for (const node of view.nodes) {
       const point = positions.get(node.id), child = childFor(view, node);
       const group = svg("g", { class: "node", "data-id": node.id, tabindex: 0, role: "button", "aria-label": node.label + (child ? "; open with ArrowRight" : "") }, diagram);
-      svg("rect", { x: point.x, y: point.y, width: 200, height: 80, rx: 10 }, group);
+      svg("rect", { x: point.x, y: point.y, width: point.width, height: point.height, rx: 10 }, group);
+      const tooltip = svg("title", {}, group); tooltip.textContent = node.label;
       const label = svg("text", { x: point.x + 12, y: point.y + 24 }, group);
-      const chunks = node.label.match(/.{1,26}/gu) || [""];
-      chunks.slice(0, 3).forEach((line, index) => { const span = svg("tspan", { x: point.x + 12, dy: index ? 17 : 0 }, label); span.textContent = line; });
-      if (child) { const hint = svg("text", { x: point.x + 180, y: point.y + 68 }, group); hint.textContent = "↗"; }
+      point.lines.forEach((line, index) => { const span = svg("tspan", { x: point.x + 12, dy: index ? 18 : 0 }, label); span.textContent = line + (point.truncated && index === point.lines.length - 1 ? "…" : ""); if (span.getComputedTextLength() > point.width - 24) { span.setAttribute("textLength", point.width - 24); span.setAttribute("lengthAdjust", "spacingAndGlyphs"); } });
+      if (child) { const hint = svg("text", { x: point.x + point.width - 22, y: point.y + point.height - 12 }, group); hint.textContent = "↗"; }
       group.addEventListener("click", () => select(node.id));
       group.addEventListener("dblclick", () => open(child));
       group.addEventListener("keydown", event => {
@@ -147,10 +151,34 @@
   function back() { if (route.length > 1) { route.pop(); selected = null; zoom = 1; render(); } }
   $("back").addEventListener("click", back);
   $("search").addEventListener("input", tree);
-  $("zoom-in").addEventListener("click", () => { zoom = Math.min(8, zoom * 1.25); sizing(); });
+  $("zoom-in").addEventListener("click", () => { zoom = Math.min(64, zoom * 1.25); sizing(); });
   $("zoom-out").addEventListener("click", () => { zoom = Math.max(.25, zoom / 1.25); sizing(); });
   $("fit").addEventListener("click", () => { zoom = 1; sizing(); $("viewport").scrollTo(0, 0); });
   document.addEventListener("keydown", event => { if (event.altKey && event.key === "ArrowLeft") { event.preventDefault(); back(); } });
   new ResizeObserver(sizing).observe($("viewport"));
+  const viewport = $("viewport");
+  let drag = null;
+  viewport.addEventListener("pointerdown", event => {
+    if (event.pointerType !== "mouse" || event.button !== 0 || event.target.closest(".node,.edge")) return;
+    drag = {x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
+    viewport.setPointerCapture(event.pointerId); viewport.classList.add("dragging");
+  });
+  viewport.addEventListener("pointermove", event => {
+    if (!drag) return;
+    viewport.scrollLeft = drag.left - event.clientX + drag.x;
+    viewport.scrollTop = drag.top - event.clientY + drag.y;
+  });
+  const endDrag = () => { drag = null; viewport.classList.remove("dragging"); };
+  viewport.addEventListener("pointerup", event => {
+    if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+    endDrag();
+  });
+  viewport.addEventListener("pointercancel", endDrag);
+  viewport.addEventListener("lostpointercapture", endDrag);
+  viewport.addEventListener("keydown", event => {
+    if (event.key === "+" || event.key === "=") { event.preventDefault(); $("zoom-in").click(); }
+    if (event.key === "-") { event.preventDefault(); $("zoom-out").click(); }
+    if (event.key === "0") { event.preventDefault(); $("fit").click(); }
+  });
   render();
 })();

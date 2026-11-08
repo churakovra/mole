@@ -20,3 +20,4 @@ Skill creator quick validator could not run because PyYAML is unavailable.
 | 06 | feature/pr-06-agent-protocol | Implemented; awaiting acceptance | 36 tests pass; semantic loop, pagination, stale evidence and duplicates; review findings repaired |
 | 07 | feature/pr-07-markdown-knowledge | Implemented; awaiting acceptance | 42 tests pass; independent review findings repaired/verified; manual preservation and interrupted exports |
 | 08 | feature/pr-08-offline-explorer | Implemented; awaiting combined review/acceptance | 44 tests; Chrome tests pass against three SKMs via file://; sandboxed Chrome required an elevated test run |
+| 09 | feature/pr-09-layout-accessibility | Implemented; awaiting combined review/acceptance | 46 tests pass; exact five-width Chrome matrix; screenshots visually inspected; deterministic geometry and local overflow |
