@@ -79,6 +79,14 @@ class InstalledSkillTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Bootstrap only", result.stdout)
 
+    def test_installed_scan_offline_without_target_execution(self):
+        workspace = self.root / "workspace"
+        result = self.run_cli("start", "--repo", str(self.cwd), "--workspace", str(workspace), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_cli("next", "--workspace", str(workspace), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(json.loads(result.stdout)["revision"])
+
     def test_invalid_requests(self):
         for args in [(), ("start",), ("doctor", "--repo", "."),
                      ("doctor", "--unknown")]:

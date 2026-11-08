@@ -65,8 +65,16 @@ def summary(state):
 
 
 def advance(state, directory):
-    raise MoleError("ANALYZER_UNAVAILABLE", "Source extraction is not implemented in this increment.",
-                    3, "Install a later MOLE development increment.")
+    from molekit.scanner import scan
+    transition(state, "SCANNING")
+    atomic_json(directory / "state.json", state)
+    result = scan(state["manifest"]["repo"], directory)
+    transition(state, "EXTRACTING")
+    state["scan"] = result
+    state["revision"] = result["model"]["revision"]
+    transition(state, "TRACING")
+    transition(state, "VALIDATING")
+    atomic_json(directory / "state.json", state)
 
 
 def operate(command, workspace, **options):
@@ -75,7 +83,9 @@ def operate(command, workspace, **options):
         if command == "status":
             return summary(state)
         if command == "next":
-            if state["status"] == "NEW":
+            if state["status"] in ("NEW", "SCANNING", "FAILED"):
+                if state["status"] == "SCANNING":
+                    state["status"] = "NEW"  # resume from last fully committed input
                 advance(state, directory)
             pending = [t for t in state["tasks"] if t.get("status") == "pending"]
             return {**summary(state), "task": pending[0] if pending else None}

@@ -55,3 +55,17 @@ uses an OS-owned lock released on exit/crash. The state file is authoritative.
 `next`, `inspect`, `submit`, and `finish` are reserved workflow boundaries;
 source extraction, semantic validation, and export are enabled by later PRs.
 They return explicit errors until their respective implementations are present.
+
+### Static source scan (PR-04)
+
+Run `next --workspace PATH --json` after `start` to inventory and parse sources.
+The engine records AST symbols, imports, branches and possible calls without
+importing target modules. Syntax incompatible with the host Python is reported
+as `PARSER_UNSUPPORTED_SYNTAX`; install a newer interpreter explicitly if needed.
+The scanner skips secret filenames, symlinks, binary and oversized files, uses
+nested `.gitignore` rules, and bounds inventory time and file count. Ignore
+matching supports ordinary glob/negation patterns; Git escaped-pattern edge
+cases are not supported. UTF-8 text is the current source encoding contract.
+A cache keyed by content hash and host parser version avoids reparsing unchanged
+Python files. The source revision is a deterministic inventory hash, not a Git
+commit or proof of runtime behavior.
