@@ -54,6 +54,7 @@ def main(argv=None):
         if name == "finish":
             command.add_argument("--output", required=True)
             command.add_argument("--allow-partial", action="store_true")
+            command.add_argument("--format", dest="formats", action="append", choices=("markdown", "html", "drawio", "mermaid"))
     try:
         args = parser.parse_args(argv)
     except InvalidRequest as exc:

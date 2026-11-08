@@ -132,3 +132,15 @@ visible conflict warning. Malformed/blocked/quota-limited storage is reported;
 a failed save remains in memory and does not replace the last persisted store.
 Browser edits are not shared editing and do not modify Markdown or canonical SKM.
 Moving files/origins or using another browser may change localStorage availability.
+
+### Diagram interchange (PR-11)
+
+Default export includes multipage `confluence/workflows.drawio` with stable
+shape/page IDs and internal navigation. `--format markdown` selects Markdown
+alone; repeat `--format` for html/drawio/mermaid. Mermaid is optional and explicitly
+lossy. See the bundled [Confluence guide](skills/mole/references/confluence-export.md).
+XML round-trip, escaping, reference/link checks and official XSD validation were
+run locally. Editor save-round-trip, Mermaid external-parser and Confluence
+Cloud/app acceptance remain NOT_RUN; these are not certified integrations.
+For optional development XSD checks, set MOLE_DRAWIO_XSD to a local official
+mxfile.xsd and provide xmllint. The runtime never downloads a schema.

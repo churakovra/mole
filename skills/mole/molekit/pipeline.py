@@ -134,11 +134,11 @@ def operate(command, workspace, **options):
             atomic_json(directory / "state.json", state)
             return summary(state)
         if command == "finish":
-            return finish(state, directory, options["output"], options.get("allow_partial", False))
+            return finish(state, directory, options["output"], options.get("allow_partial", False), options.get("formats"))
         raise MoleError("INVALID_REQUEST", "Unknown operation.")
 
 
-def finish(state, directory, output, allow_partial):
+def finish(state, directory, output, allow_partial, formats=None):
     from molekit.agent import ensure_fresh
     from molekit.knowledge import compose
     from molekit.markdown import documents, plan_writes, atomic_text
@@ -161,9 +161,19 @@ def finish(state, directory, output, allow_partial):
     if state.get("pendingExport", {}).get("output") == str(output):
         previous = {key: [previous.get(key), value]
                     for key, value in state["pendingExport"]["bases"].items()}
+    formats = formats or ["markdown", "html", "drawio"]
     generated = documents(model, state["manifest"]["repo"], output, partial)
-    from molekit.html import render
-    generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(output.resolve()))[:24])
+    if "html" in formats:
+        from molekit.html import render
+        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(output.resolve()))[:24])
+    else:
+        generated["README.md"] = generated["README.md"].replace(" · [Explorer](explorer.html)", "")
+    if "drawio" in formats and model["diagramViews"]:
+        from molekit.drawio import render as drawio
+        generated["confluence/workflows.drawio"] = drawio(model, partial)
+    if "mermaid" in formats and model["diagramViews"]:
+        from molekit.mermaid import render as mermaid
+        generated["workflows.mmd"] = mermaid(model, partial)
     writes, bases = plan_writes(output, generated, previous)
     # Mark the journal before touching output. Interrupted exports can resume
     # from generated content without mistaking it for an authored edit.

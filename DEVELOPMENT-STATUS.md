@@ -22,3 +22,4 @@ Skill creator quick validator could not run because PyYAML is unavailable.
 | 08 | feature/pr-08-offline-explorer | Implemented; awaiting combined review/acceptance | 44 tests; Chrome tests pass against three SKMs via file://; sandboxed Chrome required an elevated test run |
 | 09 | feature/pr-09-layout-accessibility | Implemented; awaiting combined review/acceptance | 46 tests pass; exact five-width Chrome matrix; screenshots visually inspected; deterministic geometry and local overflow |
 | 10 | feature/pr-10-field-overrides | Implemented; awaiting acceptance | Browser reload/storage/conflict/XSS tests; independent review findings repaired and verified; no shared-edit claim |
+| 11 | feature/pr-11-diagram-exports | Implemented; external acceptance pending | 55 tests pass with official XSD configured; XML round-trip/links/escaping pass; diagrams.net editor, Mermaid external parser and Confluence NOT_RUN |

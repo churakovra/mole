@@ -59,6 +59,8 @@ def contract(value, name):
 
 def validate_model(model):
     contract(model, "knowledge-model")
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,199}", model["revision"]):
+        raise MoleError("INVALID_REVISION", "Invalid revision identifier.")
     lookup = {}
     groups = {}
     for collection in COLLECTIONS:

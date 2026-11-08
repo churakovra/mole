@@ -12,7 +12,7 @@ from molekit.errors import MoleError
 
 
 def text(value):
-    escaped = html.escape(str(value), quote=False)
+    escaped = html.escape(str(value).replace("\r", " ").replace("\n", " "), quote=False)
     return re.sub(r"([\\`*_{}\[\]()#+!|>])", r"\\\1", escaped)
 
 
@@ -102,8 +102,11 @@ def plan_writes(output, generated, previous):
         path = output / relative
         if not path.resolve().is_relative_to(output.resolve()) or path.is_symlink():
             raise MoleError("UNSAFE_PATH", "Output escaped its directory.")
-        start = "<!-- mole:generated:start id=" + relative + " -->\n"
-        end = "<!-- mole:generated:end id=" + relative + " -->"
+        mermaid = path.suffix == ".mmd"
+        start = ("%% mole:generated:start id=" + relative + "\n" if mermaid
+                 else "<!-- mole:generated:start id=" + relative + " -->\n")
+        end = ("%% mole:generated:end id=" + relative if mermaid
+               else "<!-- mole:generated:end id=" + relative + " -->")
         digest = hashlib.sha256(body.encode()).hexdigest()
         if path.exists():
             current = path.read_text(encoding="utf-8")
@@ -120,7 +123,8 @@ def plan_writes(output, generated, previous):
                 continue
             pending[path] = current[:begin + len(start)] + body + current[finish:]
         else:
-            pending[path] = start + body + end + "\n\n<!-- mole:manual:start -->\n<!-- mole:manual:end -->\n"
+            manual = "\n\n%% mole:manual:start\n%% mole:manual:end\n" if mermaid else "\n\n<!-- mole:manual:start -->\n<!-- mole:manual:end -->\n"
+            pending[path] = start + body + end + manual
         bases[relative] = digest
     if conflicts:
         raise MoleError("OUTPUT_CONFLICT", "Edited or unowned generated files: " + ", ".join(conflicts), 5,
