@@ -1,0 +1,35 @@
+:root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #183c31; background: #f7f6f0; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { display: flex; align-items: baseline; gap: 1.4rem; padding: 1rem 1.5rem; background: #183c31; color: #faf8ed; }
+header strong { font-size: 1.4rem; letter-spacing: .18em; }
+header span { font-size: .85rem; }
+#warning { margin: 0; padding: .6rem 1.5rem; background: #f4e6bc; color: #483710; font-size: .85rem; }
+main { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 1rem; padding: 1rem; }
+aside { min-width: 0; padding: .7rem; border-right: 1px solid #c8d1c5; }
+label { display: block; font-size: .85rem; }
+input { width: 100%; padding: .55rem; border: 1px solid #849887; border-radius: .3rem; background: #fff; }
+button { cursor: pointer; font: inherit; border: 1px solid #849887; border-radius: .3rem; background: #fff; color: #183c31; padding: .35rem .7rem; }
+button:hover { background: #e4ecd9; }
+button:disabled { cursor: default; opacity: .45; }
+:focus-visible { outline: 3px solid #a36600; outline-offset: 3px; }
+nav ul { list-style: none; padding-left: .8rem; }
+nav button { display: block; margin: .3rem 0; text-align: left; width: 100%; overflow-wrap: anywhere; }
+nav button[aria-current="page"] { background: #dce8cf; border-color: #183c31; }
+.work { min-width: 0; }
+.toolbar { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+h1 { flex: 1; font-size: 1.15rem; margin: 0; overflow-wrap: anywhere; }
+#viewport { height: 55vh; min-height: 18rem; overflow: auto; border: 1px solid #b6c4b3; border-radius: .5rem; background: #fff; position: relative; }
+svg { display: block; }
+.node rect { fill: #f2f6ec; stroke: #607c63; stroke-width: 1.5; }
+.node.selected rect { fill: #ffe7ae; stroke: #835a00; stroke-width: 3; }
+.node text { fill: #183c31; font-size: 13px; }
+.node { cursor: pointer; }
+.edge path { fill: none; stroke: #607c63; stroke-width: 2; }
+.edge .hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
+.edge.selected path { stroke: #a36600; stroke-width: 3; }
+.edge text { font-size: 11px; fill: #394e3d; paint-order: stroke; stroke: white; stroke-width: 4px; stroke-linejoin: round; }
+#details { background: #fff; margin-top: 1rem; padding: 1.2rem; border: 1px solid #c8d1c5; border-radius: .5rem; overflow-wrap: anywhere; }
+#details h2 { margin-top: 0; font-size: 1.1rem; }
+footer { padding: 1rem; font-size: .8rem; color: #4f6254; }
+@media (max-width: 768px) { main { grid-template-columns: minmax(0, 1fr); } aside { border-right: none; } nav { max-height: 10rem; overflow: auto; } header span { display: none; } .toolbar { flex-wrap: wrap; } h1 { min-width: 45%; } }

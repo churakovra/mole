@@ -24,7 +24,7 @@ def documents(model, repo, output, partial=False):
     sources = {s["id"]: s for s in model["sources"]}
     prefix = "**PARTIAL: unresolved tasks or coverage limits remain.**\n\n" if partial else ""
     heading = prefix + "Snapshot: `" + model["revision"] + "`. Static analysis; runtime behavior is not verified.\n\n"
-    catalog = ["# System workflows\n\n" + heading, "[Architecture](architecture.md) · [Quality report](quality-report.md)\n"]
+    catalog = ["# System workflows\n\n" + heading, "[Architecture](architecture.md) · [Quality report](quality-report.md) · [Explorer](explorer.html)\n"]
     for scenario in model["scenarios"]:
         filename = "processes/" + scenario["id"] + ".md"
         catalog.append("- [" + text(scenario["title"]) + "](" + filename + ")")

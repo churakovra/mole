@@ -102,3 +102,12 @@ Generated sections are checked against their recorded base digest before an
 update; authored changes conflict rather than being overwritten. Manual text
 outside generated markers is preserved. An export journal permits interrupted
 writes to resume. Unassociated accepted claims remain in the quality report.
+
+### Offline explorer (PR-08)
+
+`finish` also writes `explorer.html` with inline model, CSS and JavaScript.
+Open it directly via `file://`. The same renderer supports each fixture model:
+process tree/search, node/connector selection, evidence details, nested views,
+leaf-safe double click, and Back along the actual containment route. Keyboard
+Enter selects, ArrowRight drills, and Alt+ArrowLeft returns. A restrictive CSP
+blocks connections; user strings are rendered as text nodes.

@@ -19,3 +19,4 @@ Skill creator quick validator could not run because PyYAML is unavailable.
 | 05 | feature/pr-05-framework-traces | Implemented; awaiting combined review/acceptance | 30 tests pass; FastAPI/Django/consumer fixtures and bounded traces |
 | 06 | feature/pr-06-agent-protocol | Implemented; awaiting acceptance | 36 tests pass; semantic loop, pagination, stale evidence and duplicates; review findings repaired |
 | 07 | feature/pr-07-markdown-knowledge | Implemented; awaiting acceptance | 42 tests pass; independent review findings repaired/verified; manual preservation and interrupted exports |
+| 08 | feature/pr-08-offline-explorer | Implemented; awaiting combined review/acceptance | 44 tests; Chrome tests pass against three SKMs via file://; sandboxed Chrome required an elevated test run |
