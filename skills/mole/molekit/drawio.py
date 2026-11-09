@@ -35,10 +35,14 @@ def render(model, partial=False):
                 "width": str(point["width"]), "height": str(point["height"]), "as": "geometry"})
         for edge_id in view["edgeIds"]:
             edge = edges[edge_id]
-            cell = ET.SubElement(cells, "mxCell", {"id": edge_id, "value": edge["kind"],
+            cell = ET.SubElement(cells, "mxCell", {"id": edge_id, "value": (edge["kind"] + (": " + edge["condition"] if edge.get("condition") else ""))[:200],
                 "source": edge["source"], "target": edge["target"], "edge": "1", "parent": "1",
-                "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;dashed=1;"})
-            ET.SubElement(cell, "mxGeometry", {"relative": "1", "as": "geometry"})
+                "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=block;dashed=1;whiteSpace=wrap;labelWidth=240;"})
+            connector = geometry['edges'][edge_id]
+            shape = ET.SubElement(cell, "mxGeometry", {"relative": "1", "as": "geometry"})
+            points = ET.SubElement(shape, 'Array', {'as': 'points'})
+            for x, y in connector['points'][1:-1]:
+                ET.SubElement(points, 'mxPoint', {'x': str(x), 'y': str(y)})
     if not model["diagramViews"]:
         raise MoleError("EXPORT_UNSUPPORTED", "No diagram views to export.", 6)
     result = ET.tostring(root, encoding="unicode") + "\n"

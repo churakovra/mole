@@ -85,3 +85,58 @@ check(document.querySelector('#warning').textContent.includes('in memory only'),
 check(document.querySelector('.node').textContent.includes('Session only'),'session edit missing');
 ''', tmp, prelude="Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked');}});")
             self.assertTrue(result["ok"], result)
+
+    def test_portable_import_rejects_bad_data_then_round_trips_and_resolves_conflict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = browser_test(render(dense_model()), '''
+const edits=window.moleOverrides;
+const before=edits.exportText();
+try { edits.importText('{malformed'); check(false,'malformed accepted'); } catch {}
+check(edits.exportText()===before,'malformed import mutated edits');
+const imported={schemaVersion:1,artifactId:'different-output',fields:[{targetId:'op-0',fieldPath:'label',baseFieldHash:'old-base',baseValue:'Old generated label',value:'My portable label'}]};
+document.querySelector('#import-edits').click();
+document.querySelector('#mole-transfer-value').value=JSON.stringify(imported);
+document.querySelector('#mole-transfer-action').click();
+check(document.querySelector('#mole-transfer-status').textContent.includes('Different artifact'),'cross artifact import did not require choice');
+document.querySelector('#mole-migrate').checked=true;
+document.querySelector('#mole-transfer-action').click();
+check(document.querySelector('.node').textContent.includes('My portable label'),'portable label missing');
+document.querySelector('.node').dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true}));
+check(document.querySelector('#mole-editor').textContent.includes('Old generated label'),'old base absent');
+check(document.querySelector('#mole-editor').textContent.includes('Current generated value:'),'new base absent');
+document.querySelector('#mole-save').click();
+const rebased=JSON.parse(edits.exportText()).fields[0];
+check(rebased.baseFieldHash!=='old-base' && rebased.baseValue.includes('Long workflow'),'keeping edit did not rebase');
+document.querySelector('#export-edits').click();
+check(document.querySelector('#mole-transfer-value').value.includes('My portable label'),'portable export missing');
+document.querySelector('#mole-transfer').close();
+edits.importText(JSON.stringify({schemaVersion:1,artifactId:'local-explorer',fields:[]}),false,true);
+check(!document.querySelector('.node').textContent.includes('My portable label'),'replacement did not clear');
+edits.importText(JSON.stringify({schemaVersion:1,artifactId:'local-explorer',fields:[rebased]}));
+document.querySelector('.node').dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true}));
+document.querySelector('#mole-use-generated').click();
+check(JSON.parse(edits.exportText()).fields.length===0,'generated resolution retained override');
+check(!document.querySelector('.node').textContent.includes('My portable label'),'generated resolution absent');
+''', tmp)
+            self.assertTrue(result['ok'], result)
+
+    def test_near_limit_export_can_import_itself_and_conditional_edge_edit_has_one_base(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            prelude = '''const names=['notes','description','definition','term','label'];
+const fields=Array.from({length:198},(_,i)=>({targetId:'op-'+(i%40),fieldPath:names[Math.floor(i/40)],baseFieldHash:'h',value:'x'.repeat(10000)}));
+localStorage.setItem('mole:local-explorer:v1',JSON.stringify({schemaVersion:1,artifactId:'local-explorer',fields}));'''
+            result = browser_test(render(dense_model()), '''
+const exported=window.moleOverrides.exportText();
+check(exported.length<=2000000,'own export exceeds transfer limit');
+window.moleOverrides.importText(exported,false,true);
+check(JSON.parse(window.moleOverrides.exportText()).fields.length===198,'near-limit backup lost fields');
+window.moleOverrides.importText(JSON.stringify({schemaVersion:1,artifactId:'local-explorer',fields:[]}),false,true);
+const edge=document.querySelector('.edge');
+edge.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+edge.querySelector('text').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));
+document.querySelector('#mole-edit-value').value='My conditional edge';
+document.querySelector('#mole-save').click();
+check(document.querySelector('#details h2').textContent==='My conditional edge','edge heading failed');
+check(!document.querySelector('#warning').textContent.toLowerCase().includes('conflict'),'edge fresh edit false conflict');
+''',tmp,prelude=prelude)
+            self.assertTrue(result['ok'],result)

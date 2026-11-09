@@ -12,7 +12,7 @@ The original fourteen local branches are preserved. Repairs are stacked separate
 | Flow foundation | feature/rc2-01-flow-foundation | Cross-file import/alias/re-export/self/class candidates, conditional regions, receiver-aware adapters and workflow task scope |
 | Knowledge | feature/rc2-02-workflow-knowledge | Implemented: workflow-first overview, connected module components, shared callable drill-downs and numbered Markdown paths/effects/failures |
 | Integrity | feature/rc2-03-generation-integrity | Implemented: separate semantic/extraction/export gates, explicit claim review, incomplete-inventory rejection, sharded snapshots, immutable export generations and complete operation paging |
-| Diagram UX | feature/rc2-04-diagram-ux | Pending: topology-aware layout, portable overrides and conflict resolution |
+| Diagram UX | feature/rc2-04-diagram-ux | Implemented: SCC/layer topology and bounded gutter routes, draw.io waypoints, portable overrides and explicit old/new conflict choices |
 | Evidence | feature/rc2-05-review-evidence | Pending: source-review bundle, measured checks, compatibility and release notes |
 
 Confirmed product gaps: P0-01/02, P1-01/02/03/04/05/07/08/09/10/12/13.

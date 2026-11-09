@@ -9,6 +9,12 @@ The uncompressed draw.io file contains one page per view and stable semantic
 cell/page IDs. Shapes use plain-text labels. Internal page links use
 `data:page/id,<pageId>`; no external source content is uploaded or hosted.
 Source evidence and full limitations remain in Markdown/HTML sidecars.
+The layout condenses cycles and places flow dependencies in columns. Shared
+row gaps carry connectors, without reserving one full top lane per edge.
+Draw.io preserves routing waypoints and conditional labels. Dense graphs may
+still have crossings; bounded detail views and zoom remain necessary. HTML
+truncates long connector text with a full tooltip/details value. Each generation
+includes `export-losses.json`; browser-local edits are not applied to draw.io.
 
 To use Confluence Cloud, install/configure a compatible draw.io app through
 your organization's process, import the local file into its macro, enable

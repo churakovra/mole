@@ -69,3 +69,42 @@ check(document.querySelector('#zoom-label').textContent==='100%','fit reset');
 check(document.querySelector('#fit').hidden,'fit button visibility');
 ''', tmp, width)
                 self.assertTrue(result["ok"], result)
+
+    def test_topology_layers_and_routes_have_no_edge_count_blank_band_or_node_intersections(self):
+        model = dense_model()
+        view = model['diagramViews'][0]
+        # Long forward path plus jump/back/self edges exercises the gutters.
+        model['relationships'][-1]['target'] = 'op-39'
+        for source, target in ((0, 20), (30, 5), (10, 10)):
+            model['relationships'].append({'id': 'extra-' + str(source), 'source': 'op-' + str(source),
+                'target': 'op-' + str(target), 'kind': 'possible', 'condition': '', 'resolution': 'possible', 'evidenceIds': ['ev1']})
+        view['edgeIds'] = [edge['id'] for edge in model['relationships']]
+        result = layout(model, view)
+        self.assertEqual(min(point['y'] for point in result['nodes'].values()), 64)
+        self.assertGreater(result['nodes']['op-39']['x'], result['nodes']['op-0']['x'])
+        for route in result['edges'].values():
+            for (x1, y1), (x2, y2) in zip(route['points'], route['points'][1:]):
+                for point in result['nodes'].values():
+                    left, top, right, bottom = point['x'], point['y'], point['x']+point['width'], point['y']+point['height']
+                    crosses = ((x1 == x2 and left < x1 < right and max(min(y1,y2),top) < min(max(y1,y2),bottom))
+                               or (y1 == y2 and top < y1 < bottom and max(min(x1,x2),left) < min(max(x1,x2),right)))
+                    self.assertFalse(crosses, (route, point))
+
+    @unittest.skipUnless(Path(BROWSER).is_file(), 'Chrome unavailable')
+    def test_long_self_edge_condition_stays_inside_canvas_and_full_details_remain(self):
+        model = dense_model()
+        model['operations'] = model['operations'][:1]
+        edge = model['relationships'][0]
+        edge.update(target=edge['source'], condition='Very long conditional branch expression ' * 12)
+        model['relationships'] = [edge]
+        model['diagramViews'][0].update(nodes=model['diagramViews'][0]['nodes'][:1], edgeIds=[edge['id']])
+        with tempfile.TemporaryDirectory() as tmp:
+            result = browser_test(render(model), '''
+const svg=document.querySelector('#diagram'),label=svg.querySelector('.edge text'),box=label.getBBox();
+check(box.x>=0 && box.x+box.width<=svg.viewBox.baseVal.width,'edge label clipped');
+check(label.textContent.includes('…'),'long edge label not marked');
+check(svg.querySelector('.edge title').textContent.includes('Very long conditional'),'full condition tooltip missing');
+svg.querySelector('.edge').dispatchEvent(new MouseEvent('click',{bubbles:true}));
+check(document.querySelector('#details').textContent.includes('Very long conditional'),'full condition details missing');
+''',tmp)
+            self.assertTrue(result['ok'],result)

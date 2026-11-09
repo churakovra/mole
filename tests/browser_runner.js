@@ -35,6 +35,7 @@ async function run() {
   });
   await call("Page.enable");
   await call("Emulation.setDeviceMetricsOverride", {width:Number(width),height:844,deviceScaleFactor:1,mobile:false});
+  await call('Emulation.setTouchEmulationEnabled', {enabled:true,maxTouchPoints:5});
   await call("Page.navigate", {url:pathToFileURL(file).href});
   let html="";
   let nativePerformed=false;
@@ -42,7 +43,11 @@ async function run() {
     if (!nativePerformed) {
       const actions=await call("Runtime.evaluate",{expression:"window.__moleActions || null",returnByValue:true});
       if(Array.isArray(actions.result.value)) {
-        for(const action of actions.result.value) await call("Input.dispatchMouseEvent",action);
+        for(const action of actions.result.value) {
+          if(action.method) await call(action.method, action.params);
+          else await call("Input.dispatchMouseEvent",action);
+          await pause(25);
+        }
         await call("Runtime.evaluate",{expression:"window.__moleActionsDone=true"});
         nativePerformed=true;
       }

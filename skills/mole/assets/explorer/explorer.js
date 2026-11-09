@@ -35,6 +35,7 @@
   }
   function canonicalLabel(id, fallback) {
     const entity = entities.get(id);
+    if (entity && entity.source && entity.target) return entity.kind + (entity.condition ? ': ' + entity.condition : '');
     return entity ? entity.title || entity.qualifiedName || entity.statement || entity.term || entity.kind || fallback : fallback;
   }
   function editable(element, id, field, base, display = base) {
@@ -53,13 +54,24 @@
     detail.replaceChildren();
     const entity = entities.get(id);
     if (!entity) return;
-    const baseLabel = entity.title || entity.qualifiedName || entity.statement || entity.term || entity.kind;
+    const baseLabel = canonicalLabel(id, id);
     const heading = paragraph(detail, edits.value(id, "label", baseLabel), "h2");
     editable(heading, id, "label", baseLabel);
+    const labelEdit = document.createElement('button'); labelEdit.type = 'button'; labelEdit.textContent = 'Edit label';
+    labelEdit.addEventListener('click', () => edits.edit(id, 'label', baseLabel)); detail.append(labelEdit);
+    const currentView = views.get(route[route.length - 1]);
+    const currentNode = currentView && currentView.nodes.find(node => node.id === id);
+    const child = currentNode && childFor(currentView, currentNode);
+    if (child) {
+      const drill = document.createElement('button'); drill.type = 'button'; drill.textContent = 'Open details'; drill.id = 'open-details';
+      drill.addEventListener('click', () => open(child)); detail.append(drill);
+    }
     for (const field of ["description", "notes"]) {
       const base = entity[field] || "";
       const element = paragraph(detail, edits.value(id, field, base) || "Add " + field);
       editable(element, id, field, base);
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Edit ' + field;
+      button.addEventListener('click', () => edits.edit(id, field, base)); detail.append(button);
     }
     paragraph(detail, "ID: " + id);
     if (entity.resolution) paragraph(detail, "Resolution: " + entity.resolution + ". " + entity.condition);
@@ -140,27 +152,34 @@
     if (!view) { $("title").textContent = "No supported diagram views"; return; }
     $("title").textContent = view.title;
     const geometry = JSON.parse(JSON.stringify(layouts[view.id]));
-    const rows = [...new Set(Object.values(geometry.nodes).map(p => p.y))].sort((a,b)=>a-b);
-    const rowGroups = rows.map(row => view.nodes.filter(node => geometry.nodes[node.id].y === row));
-    let heightDelta = 0;
-    for (const rowNodes of rowGroups) {
-      const oldHeight = Math.max(...rowNodes.map(node => geometry.nodes[node.id].height));
-      for (const node of rowNodes) {
-        const point = geometry.nodes[node.id];
-        const display = edits.value(node.id, "label", canonicalLabel(node.id, node.label), node.label);
-        const lines = display.split(/\r?\n/u).flatMap(line => line.match(/.{1,28}/gu) || [""]);
-        point.lines = lines.slice(0,12); point.truncated = lines.length > 12;
-        point.height = Math.max(88, 40 + point.lines.length * 18);
-        point.y += heightDelta;
-      }
-      heightDelta += Math.max(...rowNodes.map(node=>geometry.nodes[node.id].height)) - oldHeight;
+    const rowCount = Math.max(0, ...Object.values(geometry.nodes).map(point => point.row + 1));
+    const rowHeights = Array(rowCount).fill(88);
+    for (const node of view.nodes) {
+      const point = geometry.nodes[node.id];
+      const display = edits.value(node.id, "label", canonicalLabel(node.id, node.label), node.label);
+      const lines = display.split(/\r?\n/u).flatMap(line => line.match(/.{1,28}/gu) || [""]);
+      point.lines = lines.slice(0,12); point.truncated = lines.length > 12;
+      point.height = Math.max(88, 40 + point.lines.length * 18);
+      rowHeights[point.row] = Math.max(rowHeights[point.row], point.height);
     }
-    geometry.height += heightDelta;
+    const rowTops = [];
+    let top = 64;
+    for (const height of rowHeights) { rowTops.push(top); top += height + 76; }
+    for (const point of Object.values(geometry.nodes)) point.y = rowTops[point.row];
+    geometry.height = Math.max(240, top);
     for (const edgeId of view.edgeIds) {
       const edge = entities.get(edgeId), a = geometry.nodes[edge.source], b = geometry.nodes[edge.target];
       const x1 = a.x+a.width, y1 = a.y+a.height/2, x2 = b.x, y2 = b.y+b.height/2;
-      const lane = geometry.edges[edgeId].y + 5;
-      geometry.edges[edgeId].d = `M ${x1} ${y1} H ${x1+30} V ${lane} H ${x2-30} V ${y2} H ${x2}`;
+      const connector = geometry.edges[edgeId];
+      if (connector.direct) {
+        const middle = (x1+x2)/2;
+        connector.d = `M ${x1} ${y1} L ${middle} ${y1} L ${middle} ${y2} L ${x2} ${y2}`;
+        connector.x = middle; connector.y = y1-7;
+      } else {
+        const lane = rowTops[Math.min(a.row,b.row)]-16-connector.track*5;
+        connector.d = `M ${x1} ${y1} L ${x1+24} ${y1} L ${x1+24} ${lane} L ${x2-24} ${lane} L ${x2-24} ${y2} L ${x2} ${y2}`;
+        connector.x = (x1+x2)/2; connector.y = lane-5;
+      }
     }
     const positions = new Map(Object.entries(geometry.nodes));
     baseWidth = geometry.width;
@@ -178,8 +197,13 @@
       svg("path", { d: path, "marker-end": "url(#arrow)" }, group);
       svg("path", { d: path, class: "hit" }, group);
       const label = svg("text", { x: geometry.edges[edgeId].x, y: geometry.edges[edgeId].y, "text-anchor": "middle" }, group);
-      label.textContent = edits.value(edge.id, "label", edge.kind);
-      editable(label, edge.id, "label", edge.kind);
+      const display = edits.value(edge.id, "label", canonicalLabel(edge.id, edge.kind));
+      const available = Math.max(30, Math.min(320, 2*Math.min(geometry.edges[edgeId].x, geometry.width-geometry.edges[edgeId].x)-20));
+      const characters = Math.max(3, Math.floor(available/7));
+      label.textContent = display.length > characters ? display.slice(0,characters-1) + '…' : display;
+      if (label.getComputedTextLength() > available) { label.setAttribute('textLength', available); label.setAttribute('lengthAdjust','spacingAndGlyphs'); }
+      svg('title', {}, group).textContent = display;
+      editable(label, edge.id, "label", edge.kind + (edge.condition ? ": " + edge.condition : ""));
       group.addEventListener("click", () => select(edge.id));
       group.addEventListener("keydown", event => { if (event.key === "Enter") select(edge.id); });
     }

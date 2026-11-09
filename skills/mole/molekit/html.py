@@ -26,5 +26,5 @@ def render(model, partial=False, artifact_id="local-explorer"):
 <button id="zoom-in" aria-label="Zoom in" type="button">+</button><button id="fit" type="button" hidden>Fit</button></div>
 <div id="viewport" tabindex="0" aria-label="Scrollable workflow diagram"><svg id="diagram" role="group" aria-label="Workflow diagram"></svg></div>
 <section id="details" tabindex="-1" aria-label="Selection details"><h2>Select a node or connector</h2><p>Double-click a process to open its details. Use Back to return to its parent.</p></section>
-</section></main><footer>Local artifact · edits, when available, remain in this browser</footer>
+</section></main><footer>Local artifact · edits remain in this browser. <button id="export-edits" type="button">Export edits</button> <button id="import-edits" type="button">Import edits</button></footer>
 <script id="mole-model" type="application/json">""" + data + "</script><script id=\"mole-config\" type=\"application/json\">" + config + "</script><script id=\"mole-layouts\" type=\"application/json\">" + layouts + "</script><script>" + overrides + "</script><script>" + script + "</script></body></html>\n"

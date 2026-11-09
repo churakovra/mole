@@ -34,6 +34,14 @@ unsupported programming languages remain reduced-coverage text review.
 OUTPUT_CONFLICT requires preserving authored content and resolving the conflict
 or selecting a new directory. Do not delete/edit manual notes to force success.
 Browser overrides are local presentation edits, not shared or canonical changes.
+Use the explorer's Export edits to copy a portable JSON backup, then Import edits
+in another browser. Imports validate size, version, fields and matching target
+IDs; migration from a different artifact and replacement of existing edits each
+require an explicit checkbox. Conflicts retain authored text and show previous
+and current generated values; choose Keep my edit or Use generated. Older edit
+files may have only a previous-value hash. Browser storage under file:// varies;
+JSON backups are the portable transfer mechanism. A selected node has visible
+Edit and Open details controls for touch as well as keyboard/double-click paths.
 
 Duplicate identical patches are safe; changed duplicate responses conflict.
 Changed source returns TASK_STALE; refresh before resubmitting. Quality gates

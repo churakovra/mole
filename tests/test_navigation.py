@@ -70,3 +70,26 @@ check(viewport.scrollLeft>=80 && viewport.scrollTop>=50,'mouse drag did not pan'
 check(!viewport.classList.contains('dragging'),'pointer capture did not release');
 ''', tmp)
             self.assertTrue(result["ok"], result)
+
+    def test_trusted_touch_scroll_and_visible_edit_controls(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = browser_test(render(dense_model()), '''
+for(let i=0;i<16;i++) document.querySelector('#zoom-in').click();
+const viewport=document.querySelector('#viewport'),rect=viewport.getBoundingClientRect();
+const x=rect.left+90,y=rect.top+200;
+window.__moleActions=[
+ {method:'Input.dispatchTouchEvent',params:{type:'touchStart',touchPoints:[{x,y}]}},
+ {method:'Input.dispatchTouchEvent',params:{type:'touchMove',touchPoints:[{x:x-25,y:y-25}]}},
+ {method:'Input.dispatchTouchEvent',params:{type:'touchMove',touchPoints:[{x:x-50,y:y-55}]}},
+ {method:'Input.dispatchTouchEvent',params:{type:'touchMove',touchPoints:[{x:x-70,y:y-90}]}},
+ {method:'Input.dispatchTouchEvent',params:{type:'touchEnd',touchPoints:[]}}];
+await new Promise(resolve=>{const timer=setInterval(()=>{if(window.__moleActionsDone){clearInterval(timer);resolve();}},10);});
+await new Promise(resolve=>setTimeout(resolve,100));
+check(viewport.scrollTop>30 || viewport.scrollLeft>30,'touch did not pan locally');
+check(document.documentElement.scrollWidth<=innerWidth,'touch layout expanded page');
+document.querySelector('.node').dispatchEvent(new MouseEvent('click',{bubbles:true}));
+const button=[...document.querySelectorAll('#details button')].find(button=>button.textContent==='Edit label');
+check(button,'visible touch edit control absent');button.click();
+check(document.querySelector('#mole-editor').open,'touch edit control failed');
+''', tmp,390)
+            self.assertTrue(result['ok'], result)
