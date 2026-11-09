@@ -4,7 +4,7 @@ All feature checkpoints are local and stacked: each branch starts from the prior
 feature's commit. The user authorized local commits and deferred combined review
 and merge. Nothing has been pushed, merged, tagged, installed globally or published.
 
-Current branch: `feature/rc2-06-review-evidence`.
+Current branch: `feature/rc2-07-editor-acceptance`.
 Current candidate: `1.0.0rc2`. All checkpoints await user acceptance.
 The repository had no commits before PR-01; no populated main branch was created.
 
@@ -26,7 +26,7 @@ The repository had no commits before PR-01; no populated main branch was created
 | 14 | feature/pr-14-release-preparation | d138073 |
 
 The RC1 static review was investigated against repository sources and repaired
-on six additional stacked branches:
+on six repair branches, followed by an approved editor-acceptance evidence branch:
 
 | Increment | Local branch | Checkpoint |
 | --- | --- | --- |
@@ -35,7 +35,8 @@ on six additional stacked branches:
 | Generation integrity | feature/rc2-03-generation-integrity | f665a94 |
 | Diagram usability | feature/rc2-04-diagram-ux | 26210ce |
 | Semantic extensions | feature/rc2-05-semantic-amendments | b104e2f |
-| Review evidence | feature/rc2-06-review-evidence | HEAD after final local commit |
+| Review evidence | feature/rc2-06-review-evidence | e042ac0 |
+| Editor acceptance attempt | feature/rc2-07-editor-acceptance | HEAD after local evidence commit |
 
 Independent targeted reviews covered flow resolution, workflow/nav compilation,
 snapshot/publication integrity, semantic gates, portable overrides/layout,

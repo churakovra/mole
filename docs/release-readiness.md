@@ -44,13 +44,18 @@ Replies stayed below 3,000 bytes in these measurements. Task/view bounds remain
 explicit; 50k is memory-heavy and these synthetic runs do not prove interactive
 performance for every repository or semantic quality. No token-saving claim is made.
 
+The approved online editor attempt is recorded in [editor-results.json](editor-results.json).
+No initialization event arrived, so the synthetic XML load was never sent. This
+result removes the approval blocker but supplies no compatibility pass.
+
 ## Remaining acceptance gates
 
 | Gate | State | Required evidence |
 | --- | --- | --- |
 | Python 3.11/3.14, Linux/Windows runtime matrix | NOT_RUN | Execute configured CI on those runtimes |
 | Firefox/WebKit and physical touch devices | NOT_RUN | Equivalent interactions on those browsers/devices |
-| diagrams.net editor save/reload and page-link interaction | BLOCKED_APPROVAL | Public-editor transfer rejected by automatic approval review; explicit authorization requested for synthetic fixture only |
+| diagrams.net editor load/export/reload | INCONCLUSIVE | User authorized the synthetic fixture; file and loopback HTTP parents both produced a blank iframe with no init event. See editor-results.json |
+| diagrams.net manual save/page-link interaction | NOT_RUN | Editor could not initialize in this browser environment |
 | Mermaid external parser | NOT_RUN | Supported renderer/parser check |
 | Confluence Cloud + draw.io app | NOT_RUN | Authorized tenant/app acceptance; no page was published |
 | Equal-quality LLM baseline and blind semantic assessment | NOT_RUN | Same cases and independent quality rubric |

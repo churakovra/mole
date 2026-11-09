@@ -63,7 +63,7 @@ closed; prior generations remain authoritative after interrupted staging.
 | P1-08 incomplete inventory | Missing inventory is unknown, never inferred deletion; update/freshness fail closed without invalidating prior knowledge. |
 | P1-09 export integrity | Output-owned lock; immutable generations and current.json commit; recovery, intent, adoption, notes, withdrawn-format, untracked/unreadable asset and concurrent-edit tests. |
 | P1-10 topology layout | SCC condensation, dependency columns, shared row-gap routes and draw.io waypoints; obstacle and edge-label geometry tests. Dense crossings remain possible. |
-| P1-11 editor/Confluence | Local XML/XSD checks PASS. Live editor transfer blocked by automatic approval review pending explicit authorization. Confluence remains NOT_RUN; no compatibility claim substituted. |
+| P1-11 editor/Confluence | Local XML/XSD checks PASS. After explicit approval, live editor checks from file and loopback HTTP origins were INCONCLUSIVE: blank iframe, no initialization event, no XML load sent. Confluence remains NOT_RUN; no compatibility claim substituted. |
 | P1-12 budgets/storage | Complete ops:N and scenes:N metadata paging; compact next previews; sharded cache/state/history/model and legacy-state migration tests. |
 | P1-13 scale | Indexed graph/task/view/reconciliation paths; actual 10k/50k measurements in scale-results.json. 50k remains memory-heavy, task/view coverage intentionally PARTIAL. |
 | P2-02 portable edits | JSON backup/import validates fields/targets/version/limits; explicit artifact migration/replacement; actual near-limit roundtrip. |
