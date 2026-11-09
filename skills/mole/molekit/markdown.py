@@ -29,14 +29,42 @@ def documents(model, repo, output, partial=False):
         filename = "processes/" + scenario["id"] + ".md"
         catalog.append("- [" + text(scenario["title"]) + "](" + filename + ")")
         lines = ["# " + text(scenario["title"]), "", heading,
-                 "Audience: maintainers investigating this static trace.", "",
+                 "Audience: maintainers and reviewers investigating this bounded workflow.", "",
+                 "## Actors and preconditions", "",
+                 "Actors: " + (", ".join(text(value) for value in scenario.get("actors", [])) or "Unknown; not established by source evidence."),
+                 "Preconditions: " + ("; ".join(text(value) for value in scenario.get("preconditions", [])) or "Unknown; review required."), "",
                  "## Trigger and scope", "", text(scenario["trigger"]), "",
-                 "## Operations", "", "The following are observed declarations/patterns, not a proven execution order.", ""]
+                 "## Main path", "", "Numbering is a static/authored candidate order, not proof of runtime reachability or delivery.", ""]
         refs = set()
-        for op_id in scenario["operationIds"]:
-            op = operations[op_id]
-            lines.append("- " + text(op["title"]) + " (`" + text(op["kind"]) + "`)")
+        steps = scenario.get("steps", [{"operationId": oid, "description": operations[oid]["title"], "claimIds": [], "condition": ""}
+                                      for oid in scenario["operationIds"] if operations[oid]["kind"] not in {"scenario_summary", "component_summary"}])
+        for index, step in enumerate(steps, 1):
+            op = operations[step["operationId"]]
             refs.update(op["evidenceIds"])
+            locations = []
+            for ev_id in op["evidenceIds"]:
+                source = sources[evidence[ev_id]["sourceId"]]
+                locations.append(text(source["path"]) + ":" + str(source["lineStart"]))
+            lines.append(str(index) + ". " + text(step["description"]) + " (`" + text(op["kind"]) + "`; `" + op["id"] + "`) — " + ", ".join(locations))
+            if step["condition"]:
+                lines.append("   - Condition: " + text(step["condition"]))
+        lines.extend(["", "## Alternative and failure paths", ""])
+        for branch in scenario.get("failurePaths", []):
+            lines.append("- Condition: " + text(branch["condition"]))
+            for oid in branch["operationIds"]:
+                op = operations[oid]
+                lines.append("  - " + text(op["title"]) + " (`" + text(op["kind"]) + "`)")
+                refs.update(op["evidenceIds"])
+            lines.append("  - Outcome: " + text(branch["outcome"]))
+        if not scenario.get("failurePaths"):
+            lines.append("No failure path has been established in this bounded model; absence is not proof that failures cannot occur.")
+        lines.extend(["", "## Data, state and integration effects", ""])
+        lines.extend("- " + text(value) for value in scenario.get("stateEffects", []))
+        if not scenario.get("stateEffects"):
+            lines.append("No state/integration effect has been established in this scope.")
+        view_id = next((view["id"] for view in model["diagramViews"] if view["scenarioIds"] == [scenario["id"]] and view["title"] == scenario["title"]), None)
+        if view_id:
+            lines.extend(["", "[Open workflow diagram](../explorer.html#view=" + view_id + ")", ""])
         lines.extend(["", "## Interpretation and limits", ""])
         if not scenario["claimIds"]:
             lines.append("Business purpose is unknown; no semantic claim has been accepted for this trace.")
@@ -67,9 +95,35 @@ def documents(model, repo, output, partial=False):
     if not model["scenarios"]:
         catalog.append("No supported callable traces were found. Coverage is limited to the source inventory.")
     documents["README.md"] = "\n".join(catalog) + "\n"
-    architecture = ["# Architecture inventory\n", heading,
-                    "Components below are Python declarations, not a deployment or runtime dependency map.\n"]
-    architecture.extend("- " + text(s["qualifiedName"]) + " (`" + text(s["kind"]) + "`)" for s in model["symbols"])
+    from collections import defaultdict
+    components = defaultdict(lambda: {"roles": set(), "operations": set()})
+    op_paths = {}
+    for op in model["operations"]:
+        if op["kind"] in {"scenario_summary", "component_summary"}:
+            continue
+        for ev_id in op["evidenceIds"]:
+            path = sources[evidence[ev_id]["sourceId"]]["path"]
+            components[path]["roles"].add(op["kind"])
+            components[path]["operations"].add(op["id"])
+            op_paths.setdefault(op["id"], path)
+    architecture = ["# Architecture components", "", heading,
+                    "Components/dependencies below are source candidates, not a verified deployment map.", "",
+                    "| Component | Source roles/patterns | Operations |", "| --- | --- | --- |"]
+    for path, component in sorted(components.items()):
+        architecture.append("| " + text(path) + " | " + text(", ".join(sorted(component["roles"]))) + " | " + str(len(component["operations"])) + " |")
+    architecture.extend(["", "## Cross-component and integration candidates", ""])
+    dependencies = set()
+    for edge in model["relationships"]:
+        if edge["id"].startswith("view-edge-"):
+            continue
+        source, target = op_paths.get(edge["source"]), op_paths.get(edge["target"])
+        if source and target and source != target:
+            dependencies.add((source, target, edge["kind"]))
+    architecture.extend("- " + text(source) + " → " + text(target) + " (`" + text(kind) + "`, possible)" for source, target, kind in sorted(dependencies))
+    architecture.extend(["", "## External effects and boundaries", ""])
+    external = {(op_paths.get(op["id"], "unknown"), op["title"], op["kind"]) for op in model["operations"]
+                if op["kind"] in {"publish", "consume", "db_read", "db_write", "db_execute_candidate", "transaction_boundary", "background_task"}}
+    architecture.extend("- " + text(path) + ": " + text(title) + " (`" + text(kind) + "`; guarantees unverified)" for path, title, kind in sorted(external))
     documents["architecture.md"] = "\n".join(architecture) + "\n"
     if model["glossary"]:
         glossary = ["# Glossary", "", heading]

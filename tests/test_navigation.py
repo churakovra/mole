@@ -5,10 +5,33 @@ import unittest
 from test_html import BROWSER, browser_test
 from test_layout import dense_model
 from molekit.html import render
+from molekit.scanner import scan
+from molekit.adapters import enrich
+from molekit.knowledge import compose
 
 
 @unittest.skipUnless(Path(BROWSER).is_file(), "Chrome unavailable")
 class NavigationTests(unittest.TestCase):
+    def test_compiled_dense_cycles_have_bounded_navigation_and_working_view_links(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / 'repo'
+            repo.mkdir()
+            source = 'from fastapi import FastAPI\napp=FastAPI()\n'
+            for i in range(8):
+                source += ('@app.get("/")\n' if i == 0 else '') + 'def f' + str(i) + '():\n'
+                source += ''.join('    f' + str(j) + '()\n' for j in range(8) if j != i)
+            (repo / 'app.py').write_text(source)
+            workspace = Path(tmp) / 'workspace'
+            workspace.mkdir()
+            model = compose(enrich(scan(repo, workspace)))
+            target = model['diagramViews'][0]['childRefs'][0]
+            title = next(view['title'] for view in model['diagramViews'] if view['id'] == target)
+            import json
+            result = browser_test(render(model), '''
+check(document.querySelectorAll('#tree button').length<=600,'factorial navigation expansion');
+check(document.querySelector('#title').textContent===''' + json.dumps(title) + ''','view fragment ignored');
+''', tmp, prelude='history.replaceState(null,"","#view=' + target + '");')
+            self.assertTrue(result['ok'], result)
     def test_shared_child_back_follows_actual_parent_and_loops_stop(self):
         model = dense_model()
         model["relationships"] = []

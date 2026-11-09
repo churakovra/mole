@@ -210,10 +210,13 @@ def adjacency(model):
     return result
 
 
-def workflows(scan, max_nodes=400):
+def workflows(scan, max_nodes=400, max_candidates=100):
     model = scan["model"]
     operations = {op["id"]: op for op in model["operations"]}
     graph = adjacency(model)
+    unresolved_by_operation = defaultdict(list)
+    for item in scan['unresolved']:
+        unresolved_by_operation[item.get('operationId')].append(item)
     declaration_ids = {scan["symbolOperations"][symbol["id"]] for symbol in model["symbols"] if symbol["kind"] != "class"}
     incoming = {edge["target"] for edge in model["relationships"] if edge["kind"] in {"calls", "dispatch_candidate", "invokes_handler_candidate", "schedules_candidate"}}
     entries = sorted(scan.get("entryPoints", []), key=lambda entry: (entry["kind"] != "http", entry["id"]))
@@ -228,6 +231,10 @@ def workflows(scan, max_nodes=400):
     for origin, kind, trigger in roots + [(sorted(ids)[0], "component", module) for module, ids in sorted(grouped.items()) if ids]:
         if origin in covered:
             continue
+        if len(candidates) >= max_candidates:
+            if not any(item['reason'] == 'workflow_candidate_budget_exceeded' for item in scan['limitations']):
+                scan['limitations'].append({'path': '.', 'reason': 'workflow_candidate_budget_exceeded'})
+            break
         seeds = [origin] if kind == "workflow" else sorted(grouped[trigger])
         queue = deque(seeds)
         seen, edge_ids, limits = set(), set(), []
@@ -246,8 +253,8 @@ def workflows(scan, max_nodes=400):
         if not seen:
             continue
         evs = sorted({ev for oid in seen for ev in operations[oid]["evidenceIds"]})
-        unresolved = [item for item in scan["unresolved"] if item.get("operationId") in seen]
-        candidates.append({"id": identity("workflow", origin if kind == "workflow" else "component:" + trigger),
+        unresolved = [item for oid in seen for item in unresolved_by_operation[oid]]
+        candidates.append({"id": identity("workflow", origin if kind == "workflow" else "component:" + origin),
             "kind": kind, "entryOperationId": origin, "title": operations[origin]["title"] if kind == "workflow" else trigger,
             "trigger": trigger, "operationIds": sorted(seen), "evidenceIds": evs,
             "edgeIds": sorted(edge_ids), "boundaries": unresolved,

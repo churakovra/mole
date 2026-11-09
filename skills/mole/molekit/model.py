@@ -115,6 +115,15 @@ def validate_model(model):
     for scenario in model["scenarios"]:
         refs(scenario["operationIds"], "operations")
         refs(scenario["claimIds"], "claims")
+        allowed = set(scenario["operationIds"])
+        for step in scenario.get("steps", []):
+            if step["operationId"] not in allowed:
+                raise MoleError("DANGLING_REFERENCE", "Step operation is outside its scenario.")
+            refs(step["claimIds"], "claims")
+        for branch in scenario.get("failurePaths", []):
+            if not set(branch["operationIds"]) <= allowed:
+                raise MoleError("DANGLING_REFERENCE", "Failure path operation is outside its scenario.")
+            refs(branch["claimIds"], "claims")
     for step in model["businessSteps"]:
         refs(step["operationIds"], "operations")
         refs(step["claimIds"], "claims")
@@ -124,8 +133,10 @@ def validate_model(model):
         refs(view["scenarioIds"], "scenarios")
         refs(view["childRefs"], "diagramViews")
         for node in view["nodes"]:
-            if node["id"] not in groups["operations"] | groups["symbols"]:
+            if node["id"] not in endpoints:
                 raise MoleError("DANGLING_REFERENCE", "Invalid diagram node.")
+            if node.get("childViewId") and node["childViewId"] not in view["childRefs"]:
+                raise MoleError("DANGLING_REFERENCE", "Node child view is outside its declared children.")
         refs(view["edgeIds"], "relationships")
         node_ids = [node["id"] for node in view["nodes"]]
         node_set = set(node_ids)

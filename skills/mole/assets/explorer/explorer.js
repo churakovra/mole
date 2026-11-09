@@ -27,6 +27,7 @@
     return element;
   };
   function childFor(view, node) {
+    if (node.childViewId && view.childRefs.includes(node.childViewId)) return views.get(node.childViewId);
     return (view.childRefs || []).map(id => views.get(id)).find(child => child && child.scenarioIds.some(id => {
       const scenario = entities.get(id);
       return scenario && scenario.operationIds[0] === node.id;
@@ -87,20 +88,27 @@
     const nav = $("tree");
     nav.replaceChildren();
     const query = $("search").value.toLowerCase();
+    const expanded = new Set();
+    let rendered = 0;
     function branch(id, ancestors, parent) {
+      if (rendered >= 600) return;
       const view = views.get(id);
       if (!view || ancestors.includes(id)) return;
+      rendered += 1;
+      const shared = expanded.has(id);
+      expanded.add(id);
       const list = document.createElement("ul"), item = document.createElement("li");
       const button = document.createElement("button");
-      button.textContent = view.title;
+      button.textContent = (shared ? "↪ " : "") + view.title;
       button.type = "button";
-      if (id === route[route.length - 1]) button.setAttribute("aria-current", "page");
+      if (id === route[route.length - 1] && JSON.stringify(ancestors) === JSON.stringify(route.slice(0,-1))) button.setAttribute("aria-current", "page");
       button.addEventListener("click", () => { route = [...ancestors, id]; zoom = 1; render(); });
       if (!query || view.title.toLowerCase().includes(query)) item.append(button);
-      for (const child of view.childRefs) branch(child, [...ancestors, id], item);
+      if (!shared) for (const child of view.childRefs) branch(child, [...ancestors, id], item);
       if (item.childNodes.length) { list.append(item); parent.append(list); }
     }
     if (model.diagramViews.length) branch(model.diagramViews[0].id, [], nav);
+    if (rendered >= 600) paragraph(nav, "Navigation list is bounded; use diagram drill-down or a direct view link for additional detail.");
     if (model.glossary.length) {
       paragraph(nav, "Glossary", "h2");
       for (const term of model.glossary) {
@@ -228,6 +236,20 @@
     if (event.key === "-") { event.preventDefault(); $("zoom-out").click(); }
     if (event.key === "0") { event.preventDefault(); $("fit").click(); }
   });
+  function applyViewLink() {
+    const requested = new URLSearchParams(location.hash.slice(1)).get("view");
+    if (!requested || !views.has(requested) || !model.diagramViews.length) return;
+    const queue = [[model.diagramViews[0].id]], seen = new Set();
+    while (queue.length) {
+      const path = queue.shift(), id = path[path.length-1];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      if (id === requested) { route = path; selected = null; zoom = 1; return; }
+      for (const child of views.get(id).childRefs) if (views.has(child)) queue.push([...path, child]);
+    }
+  }
+  window.addEventListener("hashchange", () => { applyViewLink(); render(); });
+  applyViewLink();
   edits.onChange(() => { render(); if(selected) select(selected); });
   render();
 })();

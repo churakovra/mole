@@ -24,7 +24,7 @@ def render(model, partial=False):
             point = geometry["nodes"][node["id"]]
             attrs = {"id": node["id"], "label": node["label"],
                      "tooltip": "Static candidate · " + node["id"] + " · snapshot " + model["revision"]}
-            child = next((views[c] for c in view["childRefs"] if any(
+            child = views.get(node.get("childViewId")) or next((views[c] for c in view["childRefs"] if any(
                 scenarios[s]["operationIds"] and scenarios[s]["operationIds"][0] == node["id"] for s in views[c]["scenarioIds"])), None)
             if child:
                 attrs["link"] = "data:page/id," + child["id"]

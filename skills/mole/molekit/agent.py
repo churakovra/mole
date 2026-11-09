@@ -14,7 +14,7 @@ def create_tasks(scan, mode):
     budget = {"quick": 20, "standard": 100, "deep": 500}[mode]
     tasks = []
     from molekit.flow import workflows
-    candidates = workflows(scan)
+    candidates = workflows(scan, max_candidates=budget)
     for workflow in candidates:
         task = {"id": identity("task", workflow["id"]), "kind": "workflow_review" if workflow["kind"] == "workflow" else "component_review",
                 "priority": "critical" if workflow["critical"] else "normal",
@@ -140,9 +140,21 @@ def accept_patch(state, task, patch):
                 raise MoleError("INVALID_ID", "Duplicate authored operation references.")
             if group == "scenarios" and not entity["outcomes"] and not entity["unknowns"]:
                 raise MoleError("INSUFFICIENT_EVIDENCE", "Scenario requires an outcome or explicit evidence boundary.")
-            for value in entity.values():
-                values = value if isinstance(value, list) else [value]
-                if any(isinstance(text, str) and redact(text) != text for text in values):
+            if group == "scenarios":
+                for step in entity.get("steps", []):
+                    if step["operationId"] not in entity["operationIds"] or not step["claimIds"] or not set(step["claimIds"]) <= claim_ids:
+                        raise MoleError("INSUFFICIENT_EVIDENCE", "Authored step needs task-grounded operations and claims.")
+                for branch in entity.get("failurePaths", []):
+                    if not set(branch["operationIds"]) <= set(entity["operationIds"]) or not branch["claimIds"] or not set(branch["claimIds"]) <= claim_ids:
+                        raise MoleError("INSUFFICIENT_EVIDENCE", "Authored failure path needs task-grounded operations and claims.")
+            pending_values = list(entity.values())
+            while pending_values:
+                value = pending_values.pop()
+                if isinstance(value, dict):
+                    pending_values.extend(value.values())
+                elif isinstance(value, list):
+                    pending_values.extend(value)
+                elif isinstance(value, str) and redact(value) != value:
                     raise MoleError("SENSITIVE_INPUT", "Authored field contains sensitive-looking content.")
         candidate[group] = candidate[group] + additions
     validate_model(candidate)
@@ -151,4 +163,6 @@ def accept_patch(state, task, patch):
     for group in authored:
         authored[group].extend(patch.get(group, []))
     state.setdefault("taskClaims", {})[task["id"]] = [claim["id"] for claim in patch["claims"]]
+    for claim in patch["claims"]:
+        state["scan"].setdefault("claimScopes", {})[claim["id"]] = task.get("scopeId", task["id"])
     task["status"] = "completed"

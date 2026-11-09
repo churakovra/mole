@@ -171,6 +171,7 @@ def refresh(state, directory):
             invalidated.append(claim["id"])
     result["model"]["claims"] = reused_claims
     kept = {c["id"] for c in reused_claims}
+    result["claimScopes"] = {cid: scope for cid, scope in state["scan"].get("claimScopes", {}).items() if cid in kept}
     available_operations = {op["id"] for op in result["model"]["operations"]}
     result["semantic"] = {}
     invalidated_semantic = []

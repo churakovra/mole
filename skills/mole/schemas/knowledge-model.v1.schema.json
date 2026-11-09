@@ -301,6 +301,93 @@
             "items": {
               "type": "string"
             }
+          },
+          "kind": {
+            "type": "string"
+          },
+          "entryOperationId": {
+            "type": "string"
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stateEffects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "operationId",
+                "description",
+                "claimIds",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "failurePaths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "type": "string"
+                },
+                "operationIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "condition",
+                "operationIds",
+                "outcome",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
@@ -378,6 +465,9 @@
                   "type": "string"
                 },
                 "label": {
+                  "type": "string"
+                },
+                "childViewId": {
                   "type": "string"
                 }
               },

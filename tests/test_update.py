@@ -85,13 +85,13 @@ class UpdateTests(unittest.TestCase):
         second = load(self.workspace)
         self.assertEqual({s["id"] for s in first["scan"]["model"]["symbols"]},
                          {s["id"] for s in second["scan"]["model"]["symbols"]})
-        self.assertEqual({o["id"] for o in first["scan"]["model"]["operations"]},
-                         {o["id"] for o in second["scan"]["model"]["operations"]})
+        self.assertEqual({o["id"] for o in first["scan"]["model"]["operations"] if o["kind"] not in {"scenario_summary", "component_summary"}},
+                         {o["id"] for o in second["scan"]["model"]["operations"] if o["kind"] not in {"scenario_summary", "component_summary"}})
         renamed = self.repo / "renamed.py"
         renamed.write_text("\n" + renamed.read_text())
         operate("update", self.workspace)
-        self.assertEqual({o["id"] for o in second["scan"]["model"]["operations"]},
-                         {o["id"] for o in load(self.workspace)["scan"]["model"]["operations"]})
+        self.assertEqual({o["id"] for o in second["scan"]["model"]["operations"] if o["kind"] not in {"scenario_summary", "component_summary"}},
+                         {o["id"] for o in load(self.workspace)["scan"]["model"]["operations"] if o["kind"] not in {"scenario_summary", "component_summary"}})
 
     def test_removed_process_keeps_manual_notes_and_is_retired(self):
         process = next(path for path in (self.output / "processes").glob("*.md") if "a.a" in path.read_text())
