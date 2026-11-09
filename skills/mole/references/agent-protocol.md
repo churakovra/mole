@@ -69,6 +69,17 @@ instead of presenting names or documentation as proof of runtime behavior.
 Unassociated accepted meaning remains in the quality report. Changes invalidating
 its supporting claims reopen the task and invalidate dependent authored knowledge.
 
+Later related tasks may append to an existing authored scenario. Inspect with
+`--cursor scenes:0` and follow `nextCursor` for related scenario IDs and
+`expectedHash` values. Add `scenarioAmendments` to a normal claims patch, using
+`scenarioId`, `expectedHash`, `addOperationIds` and `addClaimIds`. Optional
+`addSteps`, `addFailurePaths`, `addActors`, `addPreconditions`, `addStateEffects`,
+`addOutcomes` and `addUnknowns` append without deleting prior meaning. Added
+claims/operations must belong to the current task; existing operations must
+overlap or connect through an observed static relationship. Stale hashes and
+unrelated scopes are rejected without changing the workspace. This is a bounded
+extension mechanism, not permission to rewrite earlier claims or erase unknowns.
+
 ## Coverage and explicit claim review
 
 `technicalAnalysis`, `semanticCoverage` and `export` are separate quality outcomes.

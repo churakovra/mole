@@ -211,6 +211,7 @@ def refresh(state, directory):
     available_operations = {op["id"] for op in result["model"]["operations"]}
     result["semantic"] = {}
     invalidated_semantic = []
+    reconstruction_scopes = set()
     for group in ("scenarios", "businessSteps", "glossary"):
         result["semantic"][group] = []
         for entity in state["scan"].get("semantic", {}).get(group, []):
@@ -219,10 +220,13 @@ def refresh(state, directory):
                 result["model"][group].append(entity)
             else:
                 invalidated_semantic.append(entity["id"])
+                reconstruction_scopes.update(state['scan'].get('claimScopes', {}).get(cid)
+                                             for cid in entity['claimIds'])
     for task in tasks:
         old = old_tasks.get(task["id"])
         claims = state.get("taskClaims", {}).get(task["id"], [])
-        if (old and old["status"] == "completed" and claims and set(claims) <= kept
+        if (task.get('scopeId', task['id']) not in reconstruction_scopes
+                and old and old["status"] == "completed" and claims and set(claims) <= kept
                 and set(old["evidenceIds"]) == set(task["evidenceIds"])):
             task["status"] = "completed"
     for task in state['tasks']:
@@ -243,7 +247,8 @@ def refresh(state, directory):
                                  if cid in kept and set(review.get('evidenceIds', [])) <= available},
                    taskClaims={tid: [cid for cid in ids if cid in kept] for tid, ids in state.get("taskClaims", {}).items()},
                    status="NEEDS_ANALYSIS" if any(t["status"] == "pending" for t in tasks) else "VALIDATING")
-    report.update(reusedClaims=len(reused_claims), invalidatedClaims=invalidated, invalidatedSemanticIds=invalidated_semantic)
+    report.update(reusedClaims=len(reused_claims), invalidatedClaims=invalidated, invalidatedSemanticIds=invalidated_semantic,
+                  reopenedSemanticScopes=sorted(scope for scope in reconstruction_scopes if scope))
     updated["changeReport"] = report
     save_state(directory, updated, writer=atomic_json)
     return updated, report

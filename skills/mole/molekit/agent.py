@@ -51,9 +51,48 @@ def ensure_fresh(state, directory):
                         "Run update to refresh affected tasks.")
 
 
+def scenario_hash(scene):
+    return sha(json.dumps(scene, sort_keys=True, ensure_ascii=True).encode())
+
+
+def related_scenarios(state, task):
+    operations = set(task.get('operationIds', []))
+    if not operations:
+        evidence = set(task['evidenceIds'])
+        operations = {op['id'] for op in state['scan']['model']['operations'] if evidence & set(op['evidenceIds'])}
+    nearby = set(operations)
+    for edge in state['scan']['model']['relationships']:
+        if edge['source'] in operations:
+            nearby.add(edge['target'])
+        if edge['target'] in operations:
+            nearby.add(edge['source'])
+    return [scene for scene in state['scan'].get('semantic', {}).get('scenarios', [])
+            if nearby & set(scene['operationIds'])]
+
+
 def inspect(state, task, budget, cursor):
     if budget < 1024 or budget > 32000:
         raise MoleError("INVALID_BUDGET", "Inspection budget must be 1024..32000 characters.")
+    if cursor.startswith('scenes:'):
+        try:
+            offset = int(cursor[7:])
+        except ValueError as exc:
+            raise MoleError('INVALID_CURSOR', 'Scenario cursor must be scenes:N.') from exc
+        scenes = related_scenarios(state, task)
+        if offset < 0 or offset > len(scenes):
+            raise MoleError('INVALID_CURSOR', 'Scenario cursor is outside related scope.')
+        result = {'taskId': task['id'], 'baseRevision': state['revision'], 'scenarios': [], 'nextCursor': None}
+        for index in range(offset, len(scenes)):
+            scene = scenes[index]
+            item = {'id': scene['id'], 'title': scene['title'][:200], 'expectedHash': scenario_hash(scene),
+                    'operationIdsCount': len(scene['operationIds']), 'claimIdsCount': len(scene['claimIds'])}
+            if len(json.dumps({**result, 'scenarios': result['scenarios'] + [item]})) > budget - 768:
+                if not result['scenarios']:
+                    raise MoleError('INVALID_BUDGET', 'Increase budget for scenario metadata.')
+                result['nextCursor'] = 'scenes:' + str(index)
+                break
+            result['scenarios'].append(item)
+        return result
     if cursor.startswith('ops:'):
         try:
             offset = int(cursor[4:])
@@ -143,7 +182,7 @@ def accept_patch(state, task, patch):
             raise MoleError('SENSITIVE_INPUT', 'Review rationale contains sensitive-looking content.')
         if not set(review['evidenceIds']) <= set(task['evidenceIds']) or (review['verdict'] == 'supported' and not review['evidenceIds']):
             raise MoleError('INSUFFICIENT_EVIDENCE', 'Review requires task-linked evidence for support.')
-        if patch['claims'] or any(patch.get(group) for group in ('scenarios', 'businessSteps', 'glossary')):
+        if patch['claims'] or any(patch.get(group) for group in ('scenarios', 'businessSteps', 'glossary', 'scenarioAmendments')):
             raise MoleError('INVALID_PATCH', 'Claim review does not author unrelated new entities.')
         for claim in state['scan']['model']['claims']:
             if claim['id'] in review['claimIds']:
@@ -172,6 +211,44 @@ def accept_patch(state, task, patch):
                           if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])}
     if "operationIds" in task:
         allowed_operations &= set(task["operationIds"])
+    amendments = patch.get('scenarioAmendments', [])
+    related = {scene['id']: scene for scene in related_scenarios(state, task)} if amendments else {}
+    amended = {}
+    for amendment in amendments:
+        scenario_id = amendment['scenarioId']
+        scene = related.get(scenario_id)
+        if scene is None or scenario_id in amended:
+            raise MoleError('INSUFFICIENT_EVIDENCE', 'Amendment must target one related authored scenario once.')
+        if amendment['expectedHash'] != scenario_hash(scene):
+            raise MoleError('TASK_CONFLICT', 'Scenario changed; inspect scenes:0 before extending it.', 5)
+        if (not amendment['addClaimIds'] or not set(amendment['addClaimIds']) <= claim_ids
+                or not set(amendment['addOperationIds']) <= allowed_operations):
+            raise MoleError('INSUFFICIENT_EVIDENCE', 'Scenario additions must cite this task claims/operations.')
+        updated = dict(scene)
+        for key, values in amendment.items():
+            if key.startswith('add'):
+                field = key[3:4].lower() + key[4:]
+                updated[field] = list(scene.get(field, []))
+                for value in values:
+                    if value not in updated[field]:
+                        updated[field].append(value)
+        for step in amendment.get('addSteps', []):
+            if step['operationId'] not in allowed_operations or not step['claimIds'] or not set(step['claimIds']) <= claim_ids:
+                raise MoleError('INSUFFICIENT_EVIDENCE', 'Added steps require current task evidence.')
+        for branch in amendment.get('addFailurePaths', []):
+            if not branch['operationIds'] or not set(branch['operationIds']) <= allowed_operations or not branch['claimIds'] or not set(branch['claimIds']) <= claim_ids:
+                raise MoleError('INSUFFICIENT_EVIDENCE', 'Added failure paths require current task evidence.')
+        pending = [amendment]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
+            elif isinstance(value, str) and redact(value) != value:
+                raise MoleError('SENSITIVE_INPUT', 'Scenario amendment contains sensitive-looking content.')
+        amended[scenario_id] = updated
+    candidate['scenarios'] = [amended.get(scene['id'], scene) for scene in candidate['scenarios']]
     for group in ("scenarios", "businessSteps", "glossary"):
         additions = patch.get(group, [])
         for entity in additions:
@@ -205,6 +282,7 @@ def accept_patch(state, task, patch):
     validate_model(candidate)
     state["scan"]["model"] = candidate
     authored = state["scan"].setdefault("semantic", {group: [] for group in ("scenarios", "businessSteps", "glossary")})
+    authored['scenarios'] = [amended.get(scene['id'], scene) for scene in authored['scenarios']]
     for group in authored:
         authored[group].extend(patch.get(group, []))
     state.setdefault("taskClaims", {})[task["id"]] = [claim["id"] for claim in patch["claims"]]

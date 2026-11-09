@@ -299,6 +299,132 @@
         "verdict"
       ],
       "additionalProperties": false
+    },
+    "scenarioAmendments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scenarioId": {
+            "type": "string"
+          },
+          "expectedHash": {
+            "type": "string"
+          },
+          "addOperationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addClaimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addOutcomes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addUnknowns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addSteps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "operationId",
+                "description",
+                "claimIds",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "addFailurePaths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "type": "string"
+                },
+                "operationIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "condition",
+                "operationIds",
+                "outcome",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "addActors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addPreconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addStateEffects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "scenarioId",
+          "expectedHash",
+          "addOperationIds",
+          "addClaimIds"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
