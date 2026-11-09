@@ -1,0 +1,13 @@
+{
+  "drawio": [
+    "No HTML details drawer or localStorage editing",
+    "Evidence remains in Markdown/HTML sidecars"
+  ],
+  "html": [
+    "Browser-local notes are not canonical/shared edits"
+  ],
+  "mermaid": [
+    "No nested viewer navigation or editing",
+    "Flow representation may lose diagram semantics"
+  ]
+}

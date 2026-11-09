@@ -3,6 +3,7 @@
   const model = JSON.parse(document.getElementById("mole-model").textContent);
   const edits = window.moleOverrides;
   const layouts = JSON.parse(document.getElementById("mole-layouts").textContent);
+  const config = JSON.parse(document.getElementById('mole-config').textContent);
   const $ = id => document.getElementById(id);
   const ns = "http://www.w3.org/2000/svg";
   const views = new Map(model.diagramViews.map(v => [v.id, v]));
@@ -74,6 +75,11 @@
       button.addEventListener('click', () => edits.edit(id, field, base)); detail.append(button);
     }
     paragraph(detail, "ID: " + id);
+    for (const scene of model.scenarios) {
+      if (!scene.operationIds.includes(id)) continue;
+      const link = document.createElement('a'); link.textContent = 'Workflow document: ' + scene.title;
+      link.href = 'processes/' + encodeURIComponent(scene.id) + '.md'; detail.append(link, document.createElement('br'));
+    }
     if (entity.resolution) paragraph(detail, "Resolution: " + entity.resolution + ". " + entity.condition);
     const ids = new Set(entity.evidenceIds || []);
     if (entity.sourceRefs) for (const ev of model.evidence) if (entity.sourceRefs.includes(ev.sourceId)) ids.add(ev.id);
@@ -86,7 +92,14 @@
     if (!ids.size) paragraph(detail, "No direct evidence attached; consult the containing process.");
     for (const id of ids) {
       const ev = evidence.get(id), source = ev && sources.get(ev.sourceId);
-      if (source) paragraph(detail, source.path + ":" + source.lineStart + "–" + source.lineEnd + " · " + ev.classification + " · " + ev.observation);
+      if (source) {
+        paragraph(detail, source.path + ":" + source.lineStart + "–" + source.lineEnd + " · " + ev.classification + " · " + ev.observation);
+        if (typeof config.sourcePrefix === 'string') {
+          const link = document.createElement('a'); link.textContent = 'Open source: ' + source.path;
+          link.href = config.sourcePrefix.split('/').map(encodeURIComponent).join('/') + '/' + source.path.split('/').map(encodeURIComponent).join('/');
+          detail.append(link);
+        }
+      }
     }
   }
   function open(child) {

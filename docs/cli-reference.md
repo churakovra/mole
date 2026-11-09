@@ -23,7 +23,10 @@ Python is parsed using the host grammar. Unsupported syntax and languages are
 reported rather than treated as successfully analyzed Python.
 
 inspect accepts `--budget-chars 1024..32000` (default 12000) and `--cursor I:OFFSET`.
-Use returned nextCursor until null. Metadata too large for the budget produces
+Use returned nextCursor until null. `ops:N` pages complete operation metadata;
+`scenes:N` pages related authored scenario IDs/hashes for bounded amendments.
+The default `I:OFFSET` stream pages source context. `next.task` is a preview,
+with full collection counts. Metadata too large for the budget produces
 INVALID_BUDGET; increase it. Secret-like blocks are suppressed before pagination.
 
 finish/export include Markdown and default to HTML + draw.io. Repeat `--format`
@@ -35,11 +38,19 @@ session's implemented checks, not release certification or proof of runtime trut
 Output must be a dedicated directory without indexed inputs. Generated sections
 are checked against prior bases. OUTPUT_CONFLICT preserves authored data; choose
 a new directory or resolve edits without deleting manual content. Repeated export
-is safe and interrupted writes use a journal. Removed processes become retired
-notices; previous SKMs remain in workspace history after update.
+is safe and publishes immutable `.mole-generations` bundles through `current.json`.
+Open `MOLE-OPEN.html` or the returned active output path. Previous generations
+remain intact; withdrawn formats are absent from the new one and listed retired.
+`--restart-export` explicitly replaces an interrupted staging intent;
+`--adopt-output` explicitly acknowledges another workspace generation for the
+same repository/scope. `update` reconciles interrupted publication. Removed
+processes retain notes as retired notices; previous SKMs remain in history.
 
 Exit codes: 0 success (including explicit PARTIAL), 2 invalid request/schema,
 3 environment/runtime, 4 lock/permission/I/O, 5 conflict/stale/corrupt state,
 6 quality/export gate failure, 10 unexpected internal error. Errors contain code,
 message, recoverable and suggestedAction. Use the code and nextAction, not chat
-memory, to decide whether to retry, update, or stop.
+memory, to decide whether to retry, update, or stop. Internal errors include a
+diagnosticId with engine-frame locations under workspace/.diagnostics; exception
+messages, source snippets and locals are excluded. Corrupt/unsupported formats
+and internal failures do not claim automatic recoverability.

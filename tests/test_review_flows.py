@@ -12,6 +12,21 @@ from molekit.agent import accept_patch
 
 
 class ReviewFlowTests(unittest.TestCase):
+    def test_later_external_import_does_not_resolve_to_shadowed_local_and_reexports_cite_bindings(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as repo:
+            root = Path(repo)
+            (root / 'api.py').write_text('def run(): return 1\nfrom unknown_library import run\ndef main(): return run()\n')
+            result = enrich(scan(root, tmp))
+            self.assertFalse(any(edge['kind'] == 'calls' for edge in result['model']['relationships']))
+            (root / 'api.py').write_text('from exports import helper as go\ndef main(): return go()\n')
+            (root / 'exports.py').write_text('from service import helper\n')
+            (root / 'service.py').write_text('def helper(): return 1\n')
+            result = enrich(scan(root, tmp))
+            evidence = {ev['id']:ev for ev in result['model']['evidence']}
+            sources = {source['id']:source for source in result['model']['sources']}
+            edge = next(edge for edge in result['model']['relationships'] if edge['kind']=='calls')
+            self.assertEqual({sources[evidence[eid]['sourceId']]['path'] for eid in edge['evidenceIds']}, {'api.py','exports.py'})
+
     def test_local_declaration_shadows_earlier_import(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as repo:
             Path(repo, "external.py").write_text("def run(): return 10\n")
@@ -33,6 +48,7 @@ class ReviewFlowTests(unittest.TestCase):
                 result = enrich(scan(repo, tmp))
                 self.assertNotIn("abcdef123456SECRET", json.dumps(result))
                 self.assertNotIn("abcdef123456SECRET", Path(tmp, "scan-cache.json").read_text())
+                self.assertFalse(any('abcdef123456SECRET' in path.read_text() for path in Path(tmp,'.objects').glob('*.json')))
     def test_cross_file_http_db_publish_consumer_share_one_review_scope(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = enrich(scan(Path(__file__).parent / "fixtures/cross-file-workflow", tmp))

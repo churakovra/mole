@@ -5,13 +5,13 @@ from pathlib import Path
 from molekit.layout import layout
 
 
-def render(model, partial=False, artifact_id="local-explorer"):
+def render(model, partial=False, artifact_id="local-explorer", source_prefix=None):
     assets = Path(__file__).resolve().parents[1] / "assets" / "explorer"
     css = (assets / "explorer.css").read_text(encoding="utf-8")
     script = (assets / "explorer.js").read_text(encoding="utf-8")
     data = json.dumps(model, ensure_ascii=True).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     layouts = json.dumps({view["id"]: layout(model, view) for view in model["diagramViews"]}, ensure_ascii=True).replace("<", "\\u003c")
-    config = json.dumps({"artifactId": artifact_id}).replace("<", "\\u003c")
+    config = json.dumps({"artifactId": artifact_id, "sourcePrefix": source_prefix}).replace("<", "\\u003c")
     overrides = (assets / "overrides.js").read_text(encoding="utf-8")
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

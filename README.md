@@ -6,7 +6,7 @@ MOLE is a self-contained Agent Skill (`$mole`) with a bundled Python engine,
 `molekit`. It inventories source, asks the agent bounded evidence-backed questions,
 and compiles a shared knowledge model into Markdown, offline HTML and draw.io.
 
-**Current version: 1.0.0rc1, an unreleased review candidate.** Implementation is
+**Current version: 1.0.0rc2, an unreleased review candidate.** Implementation is
 available locally; [release acceptance gaps](docs/release-readiness.md) remain.
 Static candidates are not verified runtime behavior.
 
@@ -55,7 +55,7 @@ reasoning; it does not claim to infer business intent by itself.
 
 ## Outputs and preservation
 
-Markdown is always included: a process catalog, architecture inventory, process
+Markdown is always included: a workflow catalog, component architecture, process
 pages, quality report, and glossary when supplied. HTML is a portable single file
 with tree/search, evidence details, nested navigation, keyboard controls,
 Fit-relative zoom, local scrolling/pan, and browser-local editing.
@@ -67,8 +67,14 @@ Generated Markdown/output sections are checked against their previous base.
 Authored changes conflict rather than being silently overwritten; manual sections
 survive updates. Changed evidence reopens affected tasks. Exact unique renames
 retain semantic identity, while ambiguous cases remain explicit.
-Browser-local edits are field overrides with base hashes, not shared editing or
-changes to the canonical model/Markdown.
+Browser-local edits use field hashes and portable JSON export/import. Conflicts
+show previous/current generated values with explicit resolution choices. These
+presentation edits do not change the canonical model or Markdown.
+
+Exports publish immutable generations under a dedicated container. Open
+`MOLE-OPEN.html` or resolve `current.json`; the returned `output` is the active
+bundle. Previous generations remain intact, manual sections carry forward,
+and untracked authored assets stop regeneration until preserved externally.
 
 Inspect the [example catalog](docs/examples/workflows/README.md),
 [offline explorer](docs/examples/workflows/explorer.html), and
@@ -78,12 +84,12 @@ Inspect the [example catalog](docs/examples/workflows/README.md),
 
 Python-first analysis uses host-version AST and detected-framework heuristics
 for FastAPI/Starlette, Django, SQLAlchemy, asyncio and messaging candidates.
-Dynamic dispatch, cross-module resolution, broker guarantees, deployment order,
+Dynamic dispatch, ambiguous cross-module references, broker guarantees, deployment order,
 and business rules may remain unknown. Unsupported source languages receive
 reduced-coverage text review; documents can represent intended workflows.
 Ignore rules support ordinary glob, slash, ** and negation patterns; Git escaped
-pattern edge cases are unsupported. Dense graphs use a bounded grid fallback;
-connector crossings are possible. Modes bound semantic task counts, not prove
+pattern edge cases are unsupported. Diagrams use SCC/layer topology with bounded gutter routes;
+dense connector crossings are possible. Modes bound semantic task counts, not prove
 coverage. See [security boundaries](docs/security-model.md).
 
 No target-project code/tests/migrations are executed, no dependencies installed,
@@ -96,6 +102,7 @@ Secret suppression is heuristic; review outputs before sharing them.
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 tools/evaluate.py --output /tmp/mole-evaluation.json
 python3 tools/package_skill.py --output /tmp/mole-review.zip
+python3 tools/package_source.py --output /tmp/mole-source-review.zip
 ```
 
 The tests exercise an isolated copy of only the skill, complete CLI workflow

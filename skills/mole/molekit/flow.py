@@ -52,7 +52,7 @@ class Resolver:
         parts = owner.split(".") if owner and owner != "<module>" else []
         return [".".join(parts[:index]) for index in range(len(parts), -1, -1)]
 
-    def canonical(self, target, path, owner, depth=0):
+    def canonical(self, target, path, owner, depth=0, trace=None):
         if depth > 8:
             return "<dynamic>"
         target = target.replace("()", "")
@@ -73,7 +73,7 @@ class Resolver:
                     value = next(iter(values))
                     if value == receiver:
                         continue
-                    resolved = self.canonical(value, path, scope, depth + 1)
+                    resolved = self.canonical(value, path, scope, depth + 1, trace)
                     if (path, value) in self.local:
                         resolved = module_name(path) + "." + value
                     return resolved + ("." + ".".join(pieces[length:]) if length < len(pieces) else "")
@@ -83,6 +83,8 @@ class Resolver:
                 return module_name(path) + "." + local_name + ("." + ".".join(pieces[1:]) if len(pieces) > 1 else "")
             alias = self.aliases[(path, scope)].get(pieces[0])
             if alias:
+                if trace is not None:
+                    trace.append((path, self.alias_lines[(path, scope)][pieces[0]], pieces[0]))
                 return alias + ("." + ".".join(pieces[1:]) if len(pieces) > 1 else "")
         if pieces[0] in {"self", "cls"}:
             candidates = [name for name in self.classes[path] if owner.startswith(name + ".")]
@@ -91,29 +93,30 @@ class Resolver:
                 return module_name(path) + "." + owner_class + ("." + ".".join(pieces[1:]) if len(pieces) > 1 else "")
         return target
 
-    def find(self, target, path, owner, visited=None):
+    def find(self, target, path, owner, visited=None, trace=None):
         visited = set() if visited is None else visited
         key = (path, owner, target)
         if key in visited or len(visited) > 20:
             return None
         visited.add(key)
-        canonical = self.canonical(target, path, owner)
+        canonical = self.canonical(target, path, owner, trace=trace)
         if canonical == "<dynamic>" or canonical.startswith("<dynamic>."):
             return None
         if canonical in self.defined:
             return self.defined[canonical]
-        for scope in self.scopes(owner):
-            local = scope + "." + target if scope else target
-            if (path, local) in self.local:
-                return self.local[(path, local)]
-        for module, paths in self.modules.items():
-            if len(paths) != 1 or not canonical.startswith(module + "."):
+        pieces = canonical.split('.')
+        for length in range(len(pieces) - 1, 0, -1):
+            module = '.'.join(pieces[:length])
+            paths = self.modules.get(module, [])
+            if len(paths) != 1:
                 continue
             exported = canonical[len(module) + 1:]
             alias = self.aliases[(paths[0], "")].get(exported.split(".")[0])
             if alias:
+                if trace is not None:
+                    trace.append((paths[0], self.alias_lines[(paths[0], '')][exported.split('.')[0]], exported.split('.')[0]))
                 suffix = exported.partition(".")[2]
-                return self.find(alias + ("." + suffix if suffix else ""), paths[0], "", visited)
+                return self.find(alias + ("." + suffix if suffix else ""), paths[0], "", visited, trace)
         return None
 
 
@@ -151,9 +154,15 @@ def connect(model, facts, symbols, records, evidence):
                 operation["ownerId"] = owner
                 owner_items[owner].append(operation)
             model["operations"].append(operation)
-            target = resolver.find(call["target"], path, call["owner"])
+            trace = []
+            target = resolver.find(call["target"], path, call["owner"], trace=trace)
+            binding_evidence = []
+            for binding_path, line, alias in dict.fromkeys(trace):
+                _, binding_ev = evidence(record_map[binding_path], line, line, 'Import binding ' + alias)
+                binding_evidence.append(binding_ev)
+            operation['evidenceIds'] = list(dict.fromkeys([ev, *binding_evidence]))
             if target:
-                relation(op_id, target, "calls", [ev], "Statically resolved name; invocation and dispatch unverified")
+                relation(op_id, target, "calls", operation['evidenceIds'], "Statically resolved name; invocation and dispatch unverified")
             elif owner and call["target"].split(".")[0] not in builtins:
                 kind = "external_dependency" if canonical.split(".")[0] in {"sqlalchemy", "django", "fastapi", "asyncio", "aio_pika", "aiokafka"} else "unresolved_dispatch"
                 unresolved.append({"evidenceId": ev, "target": canonical, "owner": owner,

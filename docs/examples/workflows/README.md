@@ -1,16 +1,15 @@
 <!-- mole:generated:start id=README.md -->
 # System workflows
 
-Snapshot: `f87ab5183c53141838a5d1f4bea31d156c6a7d03cb0b22441db331f0aa07707c`. Static analysis; runtime behavior is not verified.
+**PARTIAL: unresolved tasks or coverage limits remain.**
+
+Snapshot: `a8fb55c9cd1e9eb9f6379a813e23c4b4c1e2167a07dfdada29b4dc4959721cf8`. Static analysis; runtime behavior is not verified.
 
 
 [Architecture](architecture.md) · [Quality report](quality-report.md) · [Explorer](explorer.html)
 
-- [Static trace: app.create\_order](processes/scenario-20760a5900e3a2cc5ab7b77d.md)
-- [Static trace: app.deliver](processes/scenario-4e0e0fbd93ae5b80d31f0f28.md)
-- [Callable review: app.create\_order](processes/semantic-callable-review.md)
-
-[Glossary](glossary.md)
+- [Order processing \(static candidate\)](processes/semantic-order-processing.md)
+- [Component review: worker](processes/scenario-af8ade46047012569ca5a29a.md)
 <!-- mole:generated:end id=README.md -->
 
 <!-- mole:manual:start -->

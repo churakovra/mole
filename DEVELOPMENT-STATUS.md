@@ -4,8 +4,8 @@ All feature checkpoints are local and stacked: each branch starts from the prior
 feature's commit. The user authorized local commits and deferred combined review
 and merge. Nothing has been pushed, merged, tagged, installed globally or published.
 
-Current branch: `feature/pr-14-release-preparation`.
-Current candidate: `1.0.0rc1`. All checkpoints await user acceptance.
+Current branch: `feature/rc2-06-review-evidence`.
+Current candidate: `1.0.0rc2`. All checkpoints await user acceptance.
 The repository had no commits before PR-01; no populated main branch was created.
 
 | PR | Local branch | Checkpoint |
@@ -23,28 +23,37 @@ The repository had no commits before PR-01; no populated main branch was created
 | 11 | feature/pr-11-diagram-exports | 03dad92 |
 | 12 | feature/pr-12-incremental-updates | 8378dfb |
 | 13 | feature/pr-13-security-evals-portability | c3df833 |
-| 14 | feature/pr-14-release-preparation | HEAD after final local commit |
+| 14 | feature/pr-14-release-preparation | d138073 |
 
-PR-14 also closes candidate-contract audit gaps: bounded authored scenarios,
-business mappings/glossary, safe narrow path scopes, matching JSON read/write
-limits, and slash-aware ignore patterns. The optional semantic-patch additions
-remain backward-compatible with claims-only v1 patches.
+The RC1 static review was investigated against repository sources and repaired
+on six additional stacked branches:
 
-Independent targeted reviews covered bootstrap, persistence, model provenance,
-scanner/cache, semantic protocol, authored-note preservation, browser overrides,
-incremental identities, contextual secret suppression and authored knowledge.
-Verified findings were repaired and rechecked. Combined product/release review
-is still pending; targeted reviews are not acceptance of the entire product.
+| Increment | Local branch | Checkpoint |
+| --- | --- | --- |
+| Flow foundation | feature/rc2-01-flow-foundation | 4e0ba35 |
+| Workflow knowledge | feature/rc2-02-workflow-knowledge | ead3f64 |
+| Generation integrity | feature/rc2-03-generation-integrity | f665a94 |
+| Diagram usability | feature/rc2-04-diagram-ux | 26210ce |
+| Semantic extensions | feature/rc2-05-semantic-amendments | b104e2f |
+| Review evidence | feature/rc2-06-review-evidence | HEAD after final local commit |
 
-Fresh verification and remaining gaps are recorded in
-[release readiness](docs/release-readiness.md). Evaluation data is in
-[the checked-in report](docs/evaluation-results.json).
+Independent targeted reviews covered flow resolution, workflow/nav compilation,
+snapshot/publication integrity, semantic gates, portable overrides/layout,
+scenario extension/update lineage and final evidence packaging. Verified findings
+were fixed and rechecked. See [finding dispositions](docs/reviews/rc1-resolution.md)
+and [fresh checks and acceptance gaps](docs/release-readiness.md).
 
-To review the root bootstrap: `git show --stat e73e85b`.
-For later increments: `git diff <prior-branch>..<feature-branch>`.
-For all later work together:
-`git diff feature/pr-01-skill-bootstrap..feature/pr-14-release-preparation`.
-Review the root bootstrap in addition to that combined diff.
+The installable ZIP contains only the complete skill payload. The source-review
+ZIP contains the combined tracked source snapshot, tests/fixtures/CI/docs and
+local branch provenance. Neither archive merges branches or includes Git history.
+The repository retains every branch and local commit for review.
 
-Next action: combined user review, outstanding acceptance checks, then an
-explicit decision on the initial main baseline and merge/release sequence.
+To review bootstrap: `git show --stat e73e85b`.
+For each increment: `git diff <prior-branch>..<feature-branch>`.
+For RC2 repairs together:
+`git diff feature/pr-14-release-preparation..feature/rc2-06-review-evidence`.
+Review original PR-01..14 as well when evaluating the entire implementation.
+
+Next action: combined user review and outstanding acceptance checks, followed by
+an explicit decision on the initial main baseline and merge/release sequence.
+No branch has been merged, pushed, tagged or published.

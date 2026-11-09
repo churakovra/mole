@@ -87,3 +87,17 @@ check(document.querySelector('#title').textContent===oldTitle,'back failed');
 check(performance.getEntriesByType('resource').length===0,'external resources requested');
 ''', tmp)
                 self.assertTrue(result["ok"], result)
+
+    @unittest.skipUnless(Path(BROWSER).is_file(), 'Chrome unavailable')
+    def test_operation_details_link_workflow_document_and_source(self):
+        from test_layout import dense_model
+        model = dense_model()
+        model['scenarios'] = [{'id':'semantic-test','title':'Example workflow','operationIds':['op-0']}]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = browser_test(render(model,source_prefix='../../source repo'), '''
+document.querySelector('.node[data-id="op-0"]').dispatchEvent(new MouseEvent('click',{bubbles:true}));
+const links=[...document.querySelectorAll('#details a')];
+check(links.some(link=>link.getAttribute('href')==='processes/semantic-test.md'),'workflow MD link absent');
+check(links.some(link=>link.getAttribute('href')==='../../source%20repo/fixture.py'),'source link absent or unescaped');
+''',tmp)
+            self.assertTrue(result['ok'],result)

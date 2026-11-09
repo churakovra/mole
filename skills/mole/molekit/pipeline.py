@@ -221,7 +221,9 @@ def build_outputs(state, output, logical_output, formats, partial, previous, qua
         generated["change-report.md"] = "\n".join(lines)
     if "html" in formats:
         from molekit.html import render
-        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(logical_output.resolve()))[:24])
+        import os
+        source_prefix = os.path.relpath(state['manifest']['repo'], output).replace(os.sep, '/')
+        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(logical_output.resolve()))[:24], source_prefix)
     else:
         generated["README.md"] = generated["README.md"].replace(" · [Explorer](explorer.html)", "")
     if "drawio" in formats and model["diagramViews"]:

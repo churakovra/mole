@@ -14,7 +14,7 @@ from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json, read_snapshot
 from molekit.safety import read_source
 
-PARSER_VERSION = "python-ast-v5-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v6-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
