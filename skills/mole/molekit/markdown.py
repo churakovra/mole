@@ -181,8 +181,15 @@ def plan_writes(output, generated, previous):
         end = ("%% mole:generated:end id=" + relative if mermaid
                else "<!-- mole:generated:end id=" + relative + " -->")
         digest = hashlib.sha256(body.encode()).hexdigest()
+        if path.suffix == '.json':
+            if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() != previous.get(relative):
+                conflicts.append(relative)
+                continue
+            pending[path] = body
+            bases[relative] = digest
+            continue
         if path.exists():
-            current = path.read_text(encoding="utf-8")
+            current = path.read_bytes().decode("utf-8")
             begin = current.find(start)
             finish = current.find(end)
             if begin < 0 or finish < begin or current.count(start) != 1 or current.count(end) != 1:

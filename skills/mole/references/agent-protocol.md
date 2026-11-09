@@ -48,7 +48,10 @@ Patches may additionally include `scenarios`, `businessSteps` and `glossary`
 arrays following the bundled semantic-patch schema. Their IDs must start with
 `semantic-`; they must cite claims in the same patch. Scenario and business-step
 operationIds must belong to the task's evidence. Inspect returns bounded operation
-IDs/titles; increase its budget if operationsTruncated is true. Do not guess IDs.
+IDs/titles. `next.task` previews at most 30 operation/evidence IDs and includes
+their full counts; the stored task remains complete. For every operation use
+`inspect --cursor ops:0` and follow `nextCursor` until null. Source pages use
+the separate `0:0` cursor stream. Do not guess IDs or treat a preview as complete.
 
 Each scenario includes title, trigger, operationIds, claimIds, outcomes and
 unknowns. State an explicit unknown boundary when no outcome is established.
@@ -57,3 +60,35 @@ include term, definition and claimIds. Preserve inferred/unknown claim status
 instead of presenting names or documentation as proof of runtime behavior.
 Unassociated accepted meaning remains in the quality report. Changes invalidating
 its supporting claims reopen the task and invalidate dependent authored knowledge.
+
+## Coverage and explicit claim review
+
+`technicalAnalysis`, `semanticCoverage` and `export` are separate quality outcomes.
+Completing tasks alone does not establish semantic completion. Missing authored
+actors, preconditions, steps, outcomes or failure boundaries, unknown claims,
+unresolved calls and reduced source coverage keep the result PARTIAL.
+Material delivery/transaction/retry guarantees create a `claim_review` task.
+Its patch uses `claims: []` and `review: {claimIds, evidenceIds, rationale,
+verdict}`; verdict is supported, unknown or contradicted. A supported verdict
+requires cited task evidence. This records an explicit agent review, not an
+independent proof of runtime behavior. Never upgrade an unsupported guarantee.
+
+## Output generations and recovery
+
+`finish` returns `output`, the complete active bundle, and `logicalOutput`, its
+container. Open `MOLE-OPEN.html` or resolve `current.json` once to select a bundle.
+Files live under `.mole-generations/<generation>/`; the single pointer publication
+is the commit point. Previous generations and manual notes are retained.
+The workspace uses content-addressed `.objects` with a small state.json pointer;
+copy the whole workspace to preserve it. Version-1 workspaces load and migrate
+on the next save; unknown workspace formats are rejected.
+
+Retry an interrupted export with the same options. `--restart-export` explicitly
+abandons unpublished staging when options/notes changed. `update` reconciles a
+published pointer or abandons unpublished staging before refreshing changed
+sources. No prior generation is deleted. Another workspace must use a new output
+or explicitly `--adopt-output`; the repository/scope must still match. Withdrawn
+formats disappear from the new generation and remain in the previous one, listed
+by its retirement manifest. Legacy root files are retained during migration.
+Unpublished `.stage-*` directories are not active bundles and may be removed
+manually after preserving any edits. JSON quality/loss sidecars describe limits.

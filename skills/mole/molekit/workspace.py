@@ -124,6 +124,9 @@ def locked(directory, create=False):
 
 def load(directory):
     state = read_json(Path(directory) / "state.json")
+    if isinstance(state, dict) and type(state.get('schemaVersion')) is int and state['schemaVersion'] == 2:
+        from molekit.snapshots import restore
+        state = restore(state, directory)
     if not isinstance(state, dict) or type(state.get("schemaVersion")) is not int or state["schemaVersion"] != 1:
         raise MoleError("SCHEMA_MISMATCH", "Unsupported workspace schema.")
     from molekit.pipeline import STATES
@@ -173,3 +176,16 @@ def load(directory):
                       "claims": [], **semantic}, "semantic-patch")
             validate_model({**scan["model"], **semantic, "diagramViews": []})
     return state
+
+
+def save_state(directory, state, writer=None):
+    from molekit.snapshots import save
+    save(Path(directory) / 'state.json', state, directory, writer or atomic_json)
+
+
+def read_snapshot(path, root=None):
+    value = read_json(path)
+    if isinstance(value, dict) and type(value.get('schemaVersion')) is int and value['schemaVersion'] == 2:
+        from molekit.snapshots import restore
+        return restore(value, root or Path(path).parent)
+    return value

@@ -3,6 +3,8 @@
 import argparse
 import json
 import sys
+import traceback
+import uuid
 from pathlib import Path
 
 from molekit import __version__
@@ -23,13 +25,40 @@ def emit(payload):
     print(json.dumps(payload, sort_keys=True))
 
 
-def failure(code, message, action):
+def failure(code, message, action, diagnostic_id=None):
+    error = {"code": code, "message": message[:2000],
+             "recoverable": code not in {'INTERNAL_ERROR', 'STATE_CORRUPT', 'OUTPUT_CORRUPT', 'SCHEMA_MISMATCH',
+                                         'PYTHON_UNSUPPORTED', 'PAYLOAD_INCOMPLETE'},
+             "suggestedAction": action}
+    if diagnostic_id:
+        error['diagnosticId'] = diagnostic_id
     emit({
         "protocolVersion": "1.0", "status": "FAILED", "nextAction": action,
         "ok": False,
-        "error": {"code": code, "message": message[:2000],
-                  "recoverable": True, "suggestedAction": action},
+        "error": error,
     })
+
+
+def save_diagnostic(workspace, exc):
+    """Record engine frame locations, never exception text, source or locals."""
+    diagnostic_id = uuid.uuid4().hex
+    payload = Path(__file__).resolve().parent
+    frames = [{'module': Path(frame.filename).name, 'line': frame.lineno, 'function': frame.name}
+              for frame in traceback.extract_tb(exc.__traceback__)
+              if Path(frame.filename).resolve().parent == payload]
+    try:
+        from molekit.workspace import locked, atomic_json
+        root = Path(workspace).absolute()
+        with locked(root):
+            diagnostics = root / '.diagnostics'
+            if diagnostics.is_symlink():
+                return diagnostic_id
+            diagnostics.mkdir(mode=0o700, exist_ok=True)
+            atomic_json(diagnostics / (diagnostic_id + '.json'), {'diagnosticId': diagnostic_id,
+                        'engineVersion': __version__, 'exceptionType': type(exc).__name__, 'frames': frames})
+    except (OSError, MoleError):
+        pass
+    return diagnostic_id
 
 
 def main(argv=None):
@@ -56,6 +85,8 @@ def main(argv=None):
             command.add_argument("--output", required=True)
             command.add_argument("--allow-partial", action="store_true")
             command.add_argument("--format", dest="formats", action="append", choices=("markdown", "html", "drawio", "mermaid"))
+            command.add_argument('--restart-export', action='store_true')
+            command.add_argument('--adopt-output', action='store_true')
     try:
         args = parser.parse_args(argv)
     except InvalidRequest as exc:
@@ -90,8 +121,9 @@ def main(argv=None):
         except OSError:
             failure("IO_ERROR", "Filesystem operation failed.", "Check paths, disk space, and permissions.")
             return 4
-        except Exception:
-            failure("INTERNAL_ERROR", "Unexpected engine failure.", "Preserve the workspace and report this error.")
+        except Exception as exc:
+            diagnostic_id = save_diagnostic(args.workspace, exc)
+            failure("INTERNAL_ERROR", "Unexpected engine failure.", "Preserve the workspace and report the diagnostic ID.", diagnostic_id)
             return 10
 
     payload = Path(__file__).resolve().parents[1]
@@ -101,7 +133,8 @@ def main(argv=None):
                 "assets/explorer/explorer.js", "assets/explorer/explorer.css", "assets/explorer/overrides.js"]
     required += ["molekit/" + name + ".py" for name in
                  ("__init__", "cli", "errors", "workspace", "pipeline", "model", "scanner",
-                  "adapters", "agent", "knowledge", "markdown", "html", "layout", "drawio", "mermaid", "update", "safety")]
+                  "adapters", "agent", "knowledge", "markdown", "html", "layout", "drawio", "mermaid", "update", "safety",
+                  "python_ast", "flow", "snapshots", "output", "quality")]
     required += ["references/" + name + ".md" for name in ("agent-protocol", "evidence-policy", "confluence-export")]
     if not all((payload / name).is_file() for name in required):
         failure("PAYLOAD_INCOMPLETE", "Installed skill payload is incomplete.", "Copy the entire skills/mole directory.")

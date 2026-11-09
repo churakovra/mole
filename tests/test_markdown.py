@@ -8,6 +8,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.errors import MoleError
 from molekit.pipeline import start, operate
+from molekit.output import resolve_output
 from molekit.workspace import load
 
 
@@ -29,23 +30,23 @@ class MarkdownTests(unittest.TestCase):
         operate("submit", self.workspace, input=response)
 
     def finish(self):
-        return operate("finish", self.workspace, output=self.output)
+        return operate("finish", self.workspace, output=self.output, allow_partial=True)
 
     def test_documentation_and_manual_sections_survive_regeneration(self):
         result = self.finish()
-        self.assertEqual(result["status"], "COMPLETED")
-        process = next((self.output / "processes").glob("*.md"))
+        self.assertEqual(result["status"], "PARTIAL")
+        process = next((resolve_output(self.output) / "processes").glob("*.md"))
         self.assertIn("source_observed", process.read_text())
         self.assertIn("app.py", process.read_text())
-        path = self.output / "README.md"
+        path = resolve_output(self.output) / "README.md"
         path.write_text(path.read_text().replace("<!-- mole:manual:start -->", "<!-- mole:manual:start -->\nMy notes"))
         self.finish()
-        self.assertIn("My notes", path.read_text())
-        self.assertEqual(operate("next", self.workspace)["status"], "COMPLETED")
+        self.assertIn("My notes", (resolve_output(self.output) / "README.md").read_text())
+        self.assertEqual(operate("next", self.workspace)["status"], "PARTIAL")
 
     def test_generated_edit_conflict_is_preserved(self):
         self.finish()
-        path = self.output / "README.md"
+        path = resolve_output(self.output) / "README.md"
         path.write_text(path.read_text().replace("# System workflows", "# My authored version"))
         before = path.read_bytes()
         with self.assertRaises(MoleError) as caught:
@@ -65,7 +66,7 @@ class MarkdownTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 self.finish()
         self.assertEqual(load(self.workspace)["status"], "EXPORTING")
-        self.assertEqual(self.finish()["status"], "COMPLETED")
+        self.assertEqual(self.finish()["status"], "PARTIAL")
 
     def test_partial_export_requires_explicit_flag(self):
         (self.repo / "legacy.py").write_text("print 'old'\n")
@@ -77,11 +78,11 @@ class MarkdownTests(unittest.TestCase):
         output = Path(self.temp.name) / "partial"
         result = operate("finish", other, output=output, allow_partial=True)
         self.assertEqual(result["status"], "PARTIAL")
-        self.assertIn("PARTIAL", (output / "README.md").read_text())
+        self.assertIn("PARTIAL", (resolve_output(output) / "README.md").read_text())
 
     def test_output_cannot_hide_indexed_source_changes(self):
         with self.assertRaises(MoleError) as caught:
-            operate("finish", self.workspace, output=self.repo)
+            operate("finish", self.workspace, output=self.repo, allow_partial=True)
         self.assertEqual(caught.exception.code, "UNSAFE_PATH")
         source_dir = self.repo / "source-docs"
         source_dir.mkdir()
@@ -106,5 +107,5 @@ class MarkdownTests(unittest.TestCase):
             "statement": "Owner must confirm retention obligations", "status": "unknown",
             "evidenceIds": [], "limitations": ["No business policy supplied"]}]}))
         operate("submit", workspace, input=response)
-        operate("finish", workspace, output=output)
-        self.assertIn("Owner must confirm", (output / "quality-report.md").read_text())
+        operate("finish", workspace, output=output, allow_partial=True)
+        self.assertIn("Owner must confirm", (resolve_output(output) / "quality-report.md").read_text())

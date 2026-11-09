@@ -5,7 +5,7 @@ from pathlib import Path
 
 from molekit.errors import MoleError
 from molekit.model import contract, validate_model
-from molekit.scanner import identity, inventory, redact, redacted_lines, sha, PARSER_VERSION
+from molekit.scanner import identity, inventory, inventory_status, redact, redacted_lines, sha, PARSER_VERSION
 from molekit.safety import read_source
 
 
@@ -41,7 +41,10 @@ def create_tasks(scan, mode):
 def ensure_fresh(state, directory):
     if state["scan"].get("parserVersion") != PARSER_VERSION:
         raise MoleError("TASK_STALE", "Parser version changed; update before continuing.", 5, "Run update.")
-    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
+    records, limitations = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
+    if not inventory_status(records, limitations, state['scan']['index'])['complete']:
+        raise MoleError('INCOMPLETE_INVENTORY', 'Cannot establish freshness from incomplete inventory.', 6,
+                        'Restore source access or narrow scope before continuing.')
     current = [{"path": r["path"], "hash": r["hash"]} for r in records]
     if current != state["scan"]["index"]:
         raise MoleError("TASK_STALE", "Source snapshot changed; update/rescan before submitting.", 5,
@@ -51,6 +54,28 @@ def ensure_fresh(state, directory):
 def inspect(state, task, budget, cursor):
     if budget < 1024 or budget > 32000:
         raise MoleError("INVALID_BUDGET", "Inspection budget must be 1024..32000 characters.")
+    if cursor.startswith('ops:'):
+        try:
+            offset = int(cursor[4:])
+        except ValueError as exc:
+            raise MoleError('INVALID_CURSOR', 'Operation cursor must be ops:N.') from exc
+        operations = [op for op in state['scan']['model']['operations']
+                      if op['kind'] not in {'scenario_summary', 'component_summary'}
+                      and set(op['evidenceIds']) & set(task['evidenceIds'])
+                      and ('operationIds' not in task or op['id'] in task['operationIds'])]
+        if offset < 0 or offset > len(operations):
+            raise MoleError('INVALID_CURSOR', 'Operation cursor is outside task scope.')
+        result = {'taskId': task['id'], 'baseRevision': state['revision'], 'operations': [], 'nextCursor': None}
+        for index in range(offset, len(operations)):
+            item = {key: operations[index][key] for key in ('id', 'title', 'kind', 'evidenceIds')}
+            candidate = {**result, 'operations': result['operations'] + [item], 'nextCursor': 'ops:' + str(index)}
+            if len(json.dumps(candidate, ensure_ascii=True)) > budget - 768:
+                if not result['operations']:
+                    raise MoleError('INVALID_BUDGET', 'Budget cannot fit operation metadata; increase --budget-chars.')
+                result['nextCursor'] = 'ops:' + str(index)
+                return result
+            result['operations'].append(item)
+        return result
     try:
         evidence_index, line_offset = map(int, cursor.split(":"))
         if min(evidence_index, line_offset) < 0 or evidence_index > len(task["evidenceIds"]):
@@ -73,6 +98,7 @@ def inspect(state, task, budget, cursor):
                 break
             result["operations"].append(operation)
         result["operationsTruncated"] = len(result["operations"]) != len(operations)
+        result['nextOperationsCursor'] = 'ops:' + str(len(result['operations'])) if result['operationsTruncated'] else None
     for index in range(evidence_index, len(task["evidenceIds"])):
         evidence = lookup[task["evidenceIds"][index]]
         source = sources[evidence["sourceId"]]
@@ -109,6 +135,25 @@ def inspect(state, task, budget, cursor):
 
 def accept_patch(state, task, patch):
     contract(patch, "semantic-patch")
+    if task['kind'] == 'claim_review':
+        review = patch.get('review')
+        if not review or set(review['claimIds']) != set(task['reviewClaimIds']) or not review['rationale']:
+            raise MoleError('INVALID_PATCH', 'Review must address every assigned claim with a rationale.')
+        if redact(review['rationale']) != review['rationale']:
+            raise MoleError('SENSITIVE_INPUT', 'Review rationale contains sensitive-looking content.')
+        if not set(review['evidenceIds']) <= set(task['evidenceIds']) or (review['verdict'] == 'supported' and not review['evidenceIds']):
+            raise MoleError('INSUFFICIENT_EVIDENCE', 'Review requires task-linked evidence for support.')
+        if patch['claims'] or any(patch.get(group) for group in ('scenarios', 'businessSteps', 'glossary')):
+            raise MoleError('INVALID_PATCH', 'Claim review does not author unrelated new entities.')
+        for claim in state['scan']['model']['claims']:
+            if claim['id'] in review['claimIds']:
+                state.setdefault('claimReviews', {})[claim['id']] = {**review, 'taskId': task['id']}
+                if review['verdict'] in {'unknown', 'contradicted'}:
+                    claim['status'] = review['verdict']
+                    claim['limitations'] = list(dict.fromkeys([*claim['limitations'], review['rationale']]))
+        validate_model(state['scan']['model'])
+        task['status'] = 'completed'
+        return
     if not patch["claims"]:
         raise MoleError("INSUFFICIENT_EVIDENCE", "Submit at least one claim, including unknown if necessary.")
     existing = {claim["id"] for claim in state["scan"]["model"]["claims"]}
@@ -166,3 +211,11 @@ def accept_patch(state, task, patch):
     for claim in patch["claims"]:
         state["scan"].setdefault("claimScopes", {})[claim["id"]] = task.get("scopeId", task["id"])
     task["status"] = "completed"
+    from molekit.quality import MATERIAL
+    material = [claim for claim in patch['claims'] if MATERIAL.search(claim['statement'])]
+    if material:
+        review_task = {**task, 'id': identity('review', task['id'] + sha(json.dumps(material, sort_keys=True).encode())),
+            'kind': 'claim_review', 'status': 'pending', 'priority': 'critical',
+            'reviewClaimIds': [claim['id'] for claim in material],
+            'question': 'Check whether evidence supports the material claims, identify contradictions, and return an explicit review verdict.'}
+        state['tasks'].append(review_task)

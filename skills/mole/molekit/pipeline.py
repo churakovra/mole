@@ -7,7 +7,7 @@ import uuid
 
 from molekit import __version__
 from molekit.errors import MoleError
-from molekit.workspace import atomic_json, load, locked, read_json
+from molekit.workspace import atomic_json, load, locked, read_json, save_state
 
 STATES = {"NEW", "SCANNING", "EXTRACTING", "TRACING", "NEEDS_ANALYSIS",
           "VALIDATING", "EXPORTING", "COMPLETED", "PARTIAL", "BLOCKED",
@@ -62,21 +62,24 @@ def start(repo, workspace, mode, scope):
             return summary(state)
         state = {"schemaVersion": 1, "runId": uuid.uuid4().hex, "status": "NEW",
                  "manifest": manifest, "tasks": [], "submissions": {}, "revision": None}
-        atomic_json(path, state)
+        save_state(directory, state, writer=atomic_json)
         return summary(state)
 
 
 def summary(state):
+    from molekit.quality import assess
+    quality = assess(state)
     return {"status": state["status"], "runId": state["runId"],
             "revision": state["revision"],
             "summary": {"pendingTasks": sum(t.get("status") == "pending" for t in state["tasks"])},
+            'quality': {key: quality[key] for key in ('technicalAnalysis', 'semanticCoverage', 'export', 'criticalUnknownCount')},
             "nextAction": {"NEW": "next", "NEEDS_ANALYSIS": "next", "VALIDATING": "finish"}.get(state["status"], "status")}
 
 
 def advance(state, directory):
     from molekit.scanner import scan
     transition(state, "SCANNING")
-    atomic_json(directory / "state.json", state)
+    save_state(directory, state, writer=atomic_json)
     result = scan(state["manifest"]["repo"], directory, scope=state["manifest"]["scope"])
     from molekit.adapters import enrich
     enrich(result)
@@ -87,7 +90,7 @@ def advance(state, directory):
     from molekit.agent import create_tasks
     state["tasks"] = create_tasks(result, state["manifest"]["mode"])
     transition(state, "NEEDS_ANALYSIS" if state["tasks"] else "VALIDATING")
-    atomic_json(directory / "state.json", state)
+    save_state(directory, state, writer=atomic_json)
 
 
 def operate(command, workspace, **options):
@@ -98,7 +101,8 @@ def operate(command, workspace, **options):
         if command in ("diff", "update"):
             from molekit.update import changes, refresh
             if command == "diff":
-                return {**summary(state), "changes": changes(state, directory)}
+                report = changes(state, directory)
+                return {**summary(state), **({'status': 'PARTIAL', 'nextAction': 'restore_inventory'} if not report['inventory']['complete'] else {}), 'changes': report}
             state, report = refresh(state, directory)
             return {**summary(state), "changes": report}
         if command == "next":
@@ -112,15 +116,25 @@ def operate(command, workspace, **options):
             pending = [t for t in state["tasks"] if t.get("status") == "pending"]
             if state["status"] == "PARTIAL" and pending:
                 transition(state, "NEEDS_ANALYSIS")
-                atomic_json(directory / "state.json", state)
-            return {**summary(state), "task": pending[0] if pending else None}
+                save_state(directory, state, writer=atomic_json)
+            task = dict(pending[0]) if pending else None
+            if task:
+                for field in ('operationIds', 'evidenceIds'):
+                    if field in task:
+                        task[field + 'Count'] = len(task[field])
+                        task[field] = task[field][:30]
+                task['question'] = task['question'][:600]
+            return {**summary(state), "task": task}
         if command == "inspect":
             task = next((t for t in state["tasks"] if t["id"] == options["task"]), None)
             if task is None:
                 raise MoleError("TASK_UNKNOWN", "Task does not exist.")
             from molekit.agent import ensure_fresh, inspect
             ensure_fresh(state, directory)
-            return {**summary(state), **inspect(state, task, options["budget_chars"], options.get("cursor", "0:0"))}
+            result = {**summary(state), **inspect(state, task, options["budget_chars"], options.get("cursor", "0:0"))}
+            if len(json.dumps(result, ensure_ascii=True)) > options['budget_chars']:
+                raise MoleError('INVALID_BUDGET', 'Budget cannot fit the complete reply metadata; increase it.')
+            return result
         if command == "submit":
             patch = read_json(options["input"])
             if not isinstance(patch, dict) or not isinstance(patch.get("taskId"), str):
@@ -148,39 +162,50 @@ def operate(command, workspace, **options):
             transition(state, "VALIDATING")
             if any(t["status"] == "pending" for t in state["tasks"]):
                 transition(state, "NEEDS_ANALYSIS")
-            atomic_json(directory / "state.json", state)
+            save_state(directory, state, writer=atomic_json)
             return summary(state)
         if command in ("finish", "export"):
-            return finish(state, directory, options["output"], options.get("allow_partial", False), options.get("formats"))
+            return finish(state, directory, options["output"], options.get("allow_partial", False), options.get("formats"), options.get("restart_export", False), options.get("adopt_output", False))
         raise MoleError("INVALID_REQUEST", "Unknown operation.")
 
 
-def finish(state, directory, output, allow_partial, formats=None):
+def finish(state, directory, output, allow_partial, formats=None, restart=False, adopt=False):
     from molekit.agent import ensure_fresh
     from molekit.knowledge import compose
-    from molekit.markdown import documents, plan_writes, atomic_text
-    if "scan" not in state:
-        raise MoleError("QUALITY_GATE_FAILED", "Run next before exporting.", 6)
-    pending = any(t["status"] == "pending" for t in state["tasks"])
-    partial = pending or any(limitation["reason"] != "excluded_class" for limitation in state["scan"]["limitations"])
-    if partial and not allow_partial:
-        raise MoleError("QUALITY_GATE_FAILED", "Pending tasks or coverage limits require --allow-partial.", 6)
-    ensure_fresh(state, directory)
-    model = compose(state["scan"])
-    output = Path(output).absolute()
+    from molekit.quality import assess
+    from molekit.output import publish
     from molekit.safety import confined_output
-    confined_output(state["manifest"]["repo"], output)
-    if output.resolve() == Path(state["manifest"]["repo"]).resolve() or output.resolve() == directory.resolve():
-        raise MoleError("UNSAFE_PATH", "Use a dedicated output subdirectory or external directory.")
-    if any((Path(state["manifest"]["repo"]) / item["path"]).resolve().is_relative_to(output.resolve())
-           for item in state["scan"]["index"]):
-        raise MoleError("UNSAFE_PATH", "Output directory contains indexed input sources; use a dedicated empty directory.")
-    old_output = state.get("output")
-    previous = state.get("exportBases", {}) if old_output == str(output) else {}
-    if state.get("pendingExport", {}).get("output") == str(output):
-        previous = {key: [previous.get(key), value]
-                    for key, value in state["pendingExport"]["bases"].items()}
-    formats = formats or ["markdown", "html", "drawio"]
+    if 'scan' not in state:
+        raise MoleError('QUALITY_GATE_FAILED', 'Run next before exporting.', 6)
+    ensure_fresh(state, directory)
+    compose(state['scan'])
+    quality = assess(state)
+    partial = quality['semanticCoverage'] != 'PASS' or quality['technicalAnalysis'] != 'PASS'
+    if partial and not allow_partial:
+        raise MoleError('QUALITY_GATE_FAILED', '; '.join(quality['reasons']), 6,
+                        'Resolve analysis/review gaps or explicitly export --allow-partial.')
+    output = Path(output).absolute()
+    confined_output(state['manifest']['repo'], output)
+    if output.resolve() in {Path(state['manifest']['repo']).resolve(), directory.resolve()}:
+        raise MoleError('UNSAFE_PATH', 'Use a dedicated output directory.')
+    if any((Path(state['manifest']['repo']) / item['path']).resolve().is_relative_to(output.resolve()) for item in state['scan']['index']):
+        raise MoleError('UNSAFE_PATH', 'Output contains indexed inputs; choose a dedicated empty directory.')
+    formats = formats or ['markdown', 'html', 'drawio']
+    published = publish(state, directory, output, formats, quality,
+        lambda physical, previous: build_outputs(state, physical, output, formats, partial, previous, {**quality, 'export': 'PASS'}),
+        lambda: save_state(directory, state, writer=atomic_json), restart, adopt)
+    from molekit.snapshots import save
+    save(directory / 'knowledge-model.json', state['scan']['model'], directory, atomic_json)
+    state.update(exportBases=published['manifest']['bases'], output=str(output), outputGeneration=published['generation'],
+                 quality=published['quality'], status='PARTIAL' if partial else 'COMPLETED')
+    state.pop('pendingExport', None)
+    save_state(directory, state, writer=atomic_json)
+    return {**summary(state), **{key: published[key] for key in ('output', 'logicalOutput', 'generation', 'files')}}
+
+
+def build_outputs(state, output, logical_output, formats, partial, previous, quality):
+    from molekit.markdown import documents
+    model = state['scan']['model']
     generated = documents(model, state["manifest"]["repo"], output, partial)
     if "changeReport" in state:
         from molekit.markdown import text
@@ -196,7 +221,7 @@ def finish(state, directory, output, allow_partial, formats=None):
         generated["change-report.md"] = "\n".join(lines)
     if "html" in formats:
         from molekit.html import render
-        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(output.resolve()))[:24])
+        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(logical_output.resolve()))[:24])
     else:
         generated["README.md"] = generated["README.md"].replace(" · [Explorer](explorer.html)", "")
     if "drawio" in formats and model["diagramViews"]:
@@ -208,28 +233,9 @@ def finish(state, directory, output, allow_partial, formats=None):
     for relative in previous:
         if relative.startswith("processes/") and relative.endswith(".md") and relative not in generated:
             generated[relative] = "# Retired process\n\nThis generated trace is no longer present at snapshot `" + state["revision"] + "`. Manual notes below are retained.\n"
-    writes, bases = plan_writes(output, generated, previous)
-    # Mark the journal before touching output. Interrupted exports can resume
-    # from generated content without mistaking it for an authored edit.
-    state["pendingExport"] = {"output": str(output), "bases": bases}
-    if state["status"] == "NEEDS_ANALYSIS":
-        transition(state, "VALIDATING")
-    if state["status"] != "EXPORTING":
-        transition(state, "EXPORTING")
-    output_resolved = output.resolve()
-    repo = Path(state["manifest"]["repo"]).resolve()
-    if output_resolved.is_relative_to(repo):
-        relative = output_resolved.relative_to(repo).as_posix() + "/"
-        state["scan"]["index"] = [r for r in state["scan"]["index"] if not r["path"].startswith(relative)]
-    state["manifest"].setdefault("outputs", [])
-    if str(output_resolved) not in state["manifest"]["outputs"]:
-        state["manifest"]["outputs"].append(str(output_resolved))
-    atomic_json(directory / "state.json", state)
-    for path, content in writes.items():
-        atomic_text(path, content)
-    atomic_json(directory / "knowledge-model.json", model)
-    state.update(exportBases=bases, output=str(output))
-    state.pop("pendingExport", None)
-    transition(state, "PARTIAL" if partial else "COMPLETED")
-    atomic_json(directory / "state.json", state)
-    return {**summary(state), "output": str(output), "files": sorted(generated)}
+    generated['quality-report.json'] = json.dumps({**quality, 'revision': state['revision']}, sort_keys=True, indent=2) + '\n'
+    losses = {'html': ['Browser-local notes are not canonical/shared edits'],
+              'drawio': ['No HTML details drawer or localStorage editing', 'Evidence remains in Markdown/HTML sidecars'],
+              'mermaid': ['No nested viewer navigation or editing', 'Flow representation may lose diagram semantics']}
+    generated['export-losses.json'] = json.dumps({name: losses[name] for name in formats if name in losses}, sort_keys=True, indent=2) + '\n'
+    return generated

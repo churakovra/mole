@@ -49,6 +49,12 @@
       "items": {
         "type": "string"
       }
+    },
+    "reviewClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

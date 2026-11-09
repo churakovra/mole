@@ -105,8 +105,9 @@ class InstalledSkillTests(unittest.TestCase):
         result = self.run_cli("submit", "--workspace", str(workspace), "--input", str(response), "--json")
         self.assertEqual(result.returncode, 0, result.stderr)
         output = self.root / "output"
-        result = self.run_cli("finish", "--workspace", str(workspace), "--output", str(output), "--json")
+        result = self.run_cli("finish", "--workspace", str(workspace), "--output", str(output), "--allow-partial", "--json")
         self.assertEqual(result.returncode, 0, result.stderr)
+        output = Path(json.loads(result.stdout)["output"])
         self.assertTrue((output / "README.md").is_file())
         self.assertTrue((output / "explorer.html").is_file())
         self.assertTrue((output / "confluence/workflows.drawio").is_file())

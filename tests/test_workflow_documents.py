@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'skills/mole'))
 from molekit.pipeline import start, operate
+from molekit.output import resolve_output
 from molekit.workspace import load
 from molekit.knowledge import compose
 
@@ -28,7 +29,7 @@ class WorkflowDocumentTests(unittest.TestCase):
             (repo / 'other.py').write_text('def g(): return 2\n')
             operate('update', workspace)
             operate('finish', workspace, output=output, allow_partial=True)
-            self.assertIn('Retention policy needs owner confirmation', (output / ('processes/' + before + '.md')).read_text())
+            self.assertIn('Retention policy needs owner confirmation', (resolve_output(output) / ('processes/' + before + '.md')).read_text())
     def test_one_document_explains_connected_order_workflow_and_failure_boundary(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(__file__).parent / 'fixtures/cross-file-workflow'
@@ -37,6 +38,7 @@ class WorkflowDocumentTests(unittest.TestCase):
             task = operate('next', workspace)['task']
             self.assertEqual(task['kind'], 'workflow_review')
             state = load(workspace)
+            task = next(item for item in state['tasks'] if item['id'] == task['id'])
             by_title = {op['title']: op['id'] for op in state['scan']['model']['operations']}
             titles = ['api.create_order', 'service.execute', 'repository.Store.save',
                       'sqlalchemy.orm.Session.add', 'sqlalchemy.orm.Session.commit',
@@ -56,7 +58,7 @@ class WorkflowDocumentTests(unittest.TestCase):
             path.write_text(json.dumps(patch))
             operate('submit', workspace, input=path)
             operate('finish', workspace, output=output, allow_partial=True)
-            document = (output / 'processes/semantic-order.md').read_text()
+            document = (resolve_output(output) / 'processes/semantic-order.md').read_text()
             for filename in ('api.py', 'service.py', 'repository.py', 'publisher.py', 'worker.py'):
                 self.assertIn(filename, document)
             self.assertIn('1. api.create', document)
@@ -73,4 +75,4 @@ class WorkflowDocumentTests(unittest.TestCase):
             self.assertGreaterEqual(len(business['edgeIds']), 3)
             module = views[business['childRefs'][0]]
             self.assertTrue(module['childRefs'])
-            self.assertIn('publisher.py', (output / 'architecture.md').read_text())
+            self.assertIn('publisher.py', (resolve_output(output) / 'architecture.md').read_text())

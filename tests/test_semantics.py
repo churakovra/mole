@@ -7,6 +7,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.errors import MoleError
 from molekit.pipeline import start, operate
+from molekit.output import resolve_output
 from molekit.workspace import load
 
 
@@ -42,13 +43,13 @@ class SemanticAuthoringTests(unittest.TestCase):
 
     def test_named_scenario_business_mapping_glossary_and_regeneration(self):
         self.submit(self.patch())
-        operate("finish", self.workspace, output=self.output)
-        self.assertIn("Approval", (self.output / "glossary.md").read_text())
-        process = self.output / "processes/semantic-approval.md"
+        operate("finish", self.workspace, output=self.output, allow_partial=True)
+        self.assertIn("Approval", (resolve_output(self.output) / "glossary.md").read_text())
+        process = resolve_output(self.output) / "processes/semantic-approval.md"
         self.assertIn("Business mapping", process.read_text())
         self.assertIn("inferred", process.read_text())
-        self.assertIn("Approval review", (self.output / "explorer.html").read_text())
-        operate("finish", self.workspace, output=self.output)
+        self.assertIn("Approval review", (resolve_output(self.output) / "explorer.html").read_text())
+        operate("finish", self.workspace, output=self.output, allow_partial=True)
         self.assertEqual(len(load(self.workspace)["scan"]["semantic"]["scenarios"]), 1)
 
     def test_authored_knowledge_reused_then_invalidated_with_its_evidence(self):
@@ -80,5 +81,5 @@ class SemanticAuthoringTests(unittest.TestCase):
         value["glossary"] = []
         value["businessSteps"][0]["what"] = "Unique authored review step"
         self.submit(value)
-        operate("finish", self.workspace, output=self.output)
-        self.assertIn("Unique authored review step", (self.output / "quality-report.md").read_text())
+        operate("finish", self.workspace, output=self.output, allow_partial=True)
+        self.assertIn("Unique authored review step", (resolve_output(self.output) / "quality-report.md").read_text())

@@ -6,7 +6,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.scanner import scan, PARSER_VERSION
 from molekit.scanner import ignored
-from molekit.workspace import read_json, atomic_json
+from molekit.workspace import read_snapshot as read_json, atomic_json
 from molekit.pipeline import start, operate
 
 

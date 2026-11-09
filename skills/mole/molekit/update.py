@@ -7,17 +7,19 @@ from molekit.adapters import enrich
 from molekit.agent import create_tasks
 from molekit.errors import MoleError
 from molekit.model import validate_model
-from molekit.scanner import identity, inventory, scan, PARSER_VERSION
-from molekit.workspace import atomic_json
+from molekit.scanner import identity, inventory, inventory_status, scan, PARSER_VERSION
+from molekit.workspace import atomic_json, save_state
 
 
 def changes(state, directory):
     if "scan" not in state:
         raise MoleError("INVALID_STATE", "Scan before requesting a diff/update.", 5)
-    records, _ = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
+    records, limitations = inventory(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"])
+    completeness = inventory_status(records, limitations, state['scan']['index'])
     before = {item["path"]: item["hash"] for item in state["scan"]["index"]}
     after = {item["path"]: item["hash"] for item in records}
-    added, removed = sorted(after.keys() - before.keys()), sorted(before.keys() - after.keys())
+    added = sorted(after.keys() - before.keys())
+    removed = sorted(before.keys() - after.keys()) if completeness['complete'] else []
     changed = sorted(path for path in before.keys() & after.keys() if before[path] != after[path])
     renames = {}
     ambiguous = []
@@ -30,6 +32,7 @@ def changes(state, directory):
             ambiguous.append(old)
     return {"added": added, "removed": removed, "changed": changed,
             "renames": renames, "ambiguousRenames": ambiguous,
+            'inventory': completeness,
             "parserChanged": state["scan"].get("parserVersion") != PARSER_VERSION}
 
 
@@ -48,16 +51,18 @@ def retain_renamed_ids(old_scan, new_scan, renames):
         prior = old_symbols.get((symbol["qualifiedName"], symbol["kind"]))
         if prior:
             mapping[symbol["id"]] = prior["id"]
-    for operation in model["operations"]:
-        matches = [op for op in old_model["operations"]
-                   if op["kind"] == operation["kind"] and op["title"] == operation["title"]
-                   and (operation["kind"] in {"function", "async_function", "class"} or
-                       [(old_sources[old_evidence[e]["sourceId"]]["path"], old_evidence[e]["excerptHash"])
-                        for e in op["evidenceIds"]] ==
-                       [(new_sources[new_evidence[e]["sourceId"]]["path"], new_evidence[e]["excerptHash"])
-                        for e in operation["evidenceIds"]])]
+    def operation_key(operation, evidence, sources):
+        declaration = operation['kind'] in {'function', 'async_function', 'class'}
+        spans = () if declaration else tuple((sources[evidence[e]['sourceId']]['path'], evidence[e]['excerptHash'])
+                                             for e in operation['evidenceIds'])
+        return operation['kind'], operation['title'], spans
+    old_operations = {}
+    for operation in old_model['operations']:
+        old_operations.setdefault(operation_key(operation, old_evidence, old_sources), []).append(operation['id'])
+    for operation in model['operations']:
+        matches = old_operations.get(operation_key(operation, new_evidence, new_sources), [])
         if len(matches) == 1:
-            mapping[operation["id"]] = matches[0]["id"]
+            mapping[operation['id']] = matches[0]
     for old_path, new_path in renames.items():
         old_prefix = old_path.removesuffix(".py").replace("/", ".") + "."
         new_prefix = new_path.removesuffix(".py").replace("/", ".") + "."
@@ -76,12 +81,16 @@ def retain_renamed_ids(old_scan, new_scan, renames):
             if title.startswith(prefix):
                 title = "<module>." + title[len(prefix):]
             return operation["kind"], title, tuple(sorted((s["lineStart"], s["lineEnd"]) for s in spans))
-        for operation in model["operations"]:
-            sig = signature(operation, new_evidence, new_sources, new_path, new_prefix)
+        old_signatures = {}
+        for operation in old_model['operations']:
+            sig = signature(operation, old_evidence, old_sources, old_path, old_prefix)
             if sig:
-                matches = [op for op in old_model["operations"] if signature(op, old_evidence, old_sources, old_path, old_prefix) == sig]
-                if len(matches) == 1:
-                    mapping[operation["id"]] = matches[0]["id"]
+                old_signatures.setdefault(sig, []).append(operation['id'])
+        for operation in model['operations']:
+            sig = signature(operation, new_evidence, new_sources, new_path, new_prefix)
+            matches = old_signatures.get(sig, [])
+            if sig and len(matches) == 1:
+                mapping[operation['id']] = matches[0]
     def allocate(items, preferred):
         """Reserve established IDs before allocating IDs for new declarations.
 
@@ -146,11 +155,34 @@ def retain_renamed_ids(old_scan, new_scan, renames):
 
 def refresh(state, directory):
     if state["status"] == "EXPORTING":
-        raise MoleError("WORKSPACE_CONFLICT", "Resume the interrupted export before updating.", 5)
+        # An explicit update abandons unpublished staging, or acknowledges an
+        # already committed pointer. Immutable generations need no rollback.
+        from molekit.output import current
+        from molekit.workspace import locked
+        pending = state.get('pendingExport', {})
+        if pending.get('version') != 2:
+            raise MoleError('WORKSPACE_CONFLICT', 'Resume the previous-engine export before updating.', 5)
+        state = copy.deepcopy(state)
+        with locked(pending['output']):
+            pointer, manifest, active = current(pending['output'])
+            if pointer and pointer.get('token') == pending['token']:
+                state.update(output=pending['output'], outputGeneration=pointer['generation'], exportBases=manifest['bases'])
+            elif pointer and pointer['generation'] != state.get('outputGeneration'):
+                raise MoleError('OUTPUT_CONFLICT', 'Another workspace changed the output during interrupted export.', 5)
+            state.pop('pendingExport', None)
+            state['status'] = 'VALIDATING'
+        # Persist reconciliation even when no source changed.
+        save_state(directory, state, writer=atomic_json)
     report = changes(state, directory)
+    if not report['inventory']['complete']:
+        raise MoleError('INCOMPLETE_INVENTORY', 'Cannot update knowledge from an incomplete source inventory.', 6,
+                        'Restore source access or narrow/adjust explicit ignore scope, then retry; prior knowledge is unchanged.')
     if not report["parserChanged"] and not any(report[key] for key in ("added", "removed", "changed")):
         return state, {**report, "reusedClaims": len(state["scan"]["model"]["claims"]), "invalidatedClaims": []}
     result = enrich(scan(state["manifest"]["repo"], directory, state["manifest"].get("outputs", []), state["manifest"]["scope"]))
+    completeness = inventory_status(result['index'], result['limitations'], state['scan']['index'])
+    if not completeness['complete']:
+        raise MoleError('INCOMPLETE_INVENTORY', 'Analysis inventory became incomplete; prior knowledge is unchanged.', 6)
     retain_renamed_ids(state["scan"], result, report["renames"])
     if report["ambiguousRenames"]:
         result["limitations"].append({"path": ".", "reason": "ambiguous_rename_requires_review"})
@@ -159,12 +191,16 @@ def refresh(state, directory):
     available = {ev["id"] for ev in result["model"]["evidence"]}
     reused_claims = []
     invalidated = []
+    claim_tasks = {}
+    new_tasks = {task['id']: task for task in tasks}
+    for tid, ids in state.get('taskClaims', {}).items():
+        for cid in ids:
+            claim_tasks.setdefault(cid, []).append(tid)
     for claim in state["scan"]["model"]["claims"]:
-        linked = [task for task, ids in state.get("taskClaims", {}).items() if claim["id"] in ids]
+        linked = claim_tasks.get(claim['id'], [])
         fresh = not report["parserChanged"] and set(claim["evidenceIds"]) <= available
         if not claim["evidenceIds"]:
-            fresh = not report["parserChanged"] and bool(linked) and all(any(t["id"] == tid and set(t["evidenceIds"]) == set(old_tasks[tid]["evidenceIds"])
-                                             for t in tasks) for tid in linked)
+            fresh = not report["parserChanged"] and bool(linked) and all(tid in new_tasks and tid in old_tasks and set(new_tasks[tid]['evidenceIds']) == set(old_tasks[tid]['evidenceIds']) for tid in linked)
         if fresh:
             reused_claims.append(claim)
         else:
@@ -189,17 +225,25 @@ def refresh(state, directory):
         if (old and old["status"] == "completed" and claims and set(claims) <= kept
                 and set(old["evidenceIds"]) == set(task["evidenceIds"])):
             task["status"] = "completed"
+    for task in state['tasks']:
+        if (task['kind'] == 'claim_review' and task['status'] == 'pending'
+                and set(task.get('reviewClaimIds', [])) <= kept
+                and set(task['evidenceIds']) <= available):
+            tasks.append({**task, 'baseRevision': result['model']['revision']})
     validate_model(result["model"])
     history = directory / "history"
     if history.is_symlink():
         raise MoleError("UNSAFE_PATH", "History must not be a symlink.")
     history.mkdir(exist_ok=True)
-    atomic_json(history / (state["revision"] + ".json"), state["scan"]["model"])
+    from molekit.snapshots import save
+    save(history / (state["revision"] + ".json"), state["scan"]["model"], directory, atomic_json)
     updated = copy.deepcopy(state)
     updated.update(scan=result, revision=result["model"]["revision"], tasks=tasks, submissions={},
+                   claimReviews={cid: review for cid, review in state.get('claimReviews', {}).items()
+                                 if cid in kept and set(review.get('evidenceIds', [])) <= available},
                    taskClaims={tid: [cid for cid in ids if cid in kept] for tid, ids in state.get("taskClaims", {}).items()},
                    status="NEEDS_ANALYSIS" if any(t["status"] == "pending" for t in tasks) else "VALIDATING")
     report.update(reusedClaims=len(reused_claims), invalidatedClaims=invalidated, invalidatedSemanticIds=invalidated_semantic)
     updated["changeReport"] = report
-    atomic_json(directory / "state.json", updated)
+    save_state(directory, updated, writer=atomic_json)
     return updated, report

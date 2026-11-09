@@ -264,6 +264,41 @@
         ],
         "additionalProperties": false
       }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "claimIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "unknown",
+            "contradicted"
+          ]
+        }
+      },
+      "required": [
+        "claimIds",
+        "evidenceIds",
+        "rationale",
+        "verdict"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

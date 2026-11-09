@@ -8,6 +8,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills/mole"))
 from molekit.errors import MoleError
 from molekit.pipeline import start, operate
+from molekit.output import resolve_output
 from molekit.workspace import load, atomic_json
 
 
@@ -33,10 +34,10 @@ class UpdateTests(unittest.TestCase):
                 "statement": "A callable is declared", "status": "source_observed",
                 "evidenceIds": task["evidenceIds"], "limitations": []}]}))
             operate("submit", self.workspace, input=path)
-        operate("finish", self.workspace, output=self.output)
+        operate("finish", self.workspace, output=self.output, allow_partial=True)
 
     def test_changed_file_invalidates_only_affected_claims(self):
-        path = self.output / "README.md"
+        path = resolve_output(self.output) / "README.md"
         path.write_text(path.read_text().replace("<!-- mole:manual:start -->", "<!-- mole:manual:start -->\nKeep this note"))
         old_revision = load(self.workspace)["revision"]
         (self.repo / "a.py").write_text("def a(): return 3\n")
@@ -47,8 +48,8 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(result["summary"]["pendingTasks"], 1)
         self.assertTrue((self.workspace / "history" / (old_revision + ".json")).exists())
         operate("finish", self.workspace, output=self.output, allow_partial=True)
-        self.assertIn("Keep this note", path.read_text())
-        self.assertIn("a.py", (self.output / "change-report.md").read_text())
+        self.assertIn("Keep this note", (resolve_output(self.output) / "README.md").read_text())
+        self.assertIn("a.py", (resolve_output(self.output) / "change-report.md").read_text())
 
     def test_unchanged_update_preserves_tasks_and_cache(self):
         before = load(self.workspace)
@@ -94,11 +95,12 @@ class UpdateTests(unittest.TestCase):
                          {o["id"] for o in load(self.workspace)["scan"]["model"]["operations"] if o["kind"] not in {"scenario_summary", "component_summary"}})
 
     def test_removed_process_keeps_manual_notes_and_is_retired(self):
-        process = next(path for path in (self.output / "processes").glob("*.md") if "a.a" in path.read_text())
+        process = next(path for path in (resolve_output(self.output) / "processes").glob("*.md") if "a.a" in path.read_text())
         process.write_text(process.read_text().replace("<!-- mole:manual:start -->", "<!-- mole:manual:start -->\nOld owner notes"))
         (self.repo / "a.py").unlink()
         operate("update", self.workspace)
-        operate("finish", self.workspace, output=self.output)
+        operate("finish", self.workspace, output=self.output, allow_partial=True)
+        process = resolve_output(self.output) / "processes" / process.name
         self.assertIn("Retired process", process.read_text())
         self.assertIn("Old owner notes", process.read_text())
 
@@ -139,3 +141,43 @@ class UpdateTests(unittest.TestCase):
                 operate("update", self.workspace)
         self.assertEqual((self.workspace / "state.json").read_bytes(), before)
         self.assertEqual(operate("update", self.workspace)["changes"]["changed"], ["a.py"])
+
+    def test_incomplete_inventory_is_unknown_not_removal(self):
+        before = (self.workspace / 'state.json').read_bytes()
+        with patch('molekit.update.inventory', return_value=([], [{'path': '.', 'reason': 'inventory_budget_exceeded'}])):
+            report = operate('diff', self.workspace)
+            self.assertEqual(report['status'], 'PARTIAL')
+            self.assertEqual(report['changes']['removed'], [])
+            self.assertEqual(report['changes']['inventory']['unknownPaths'], ['a.py', 'b.py'])
+            with self.assertRaises(MoleError) as caught:
+                operate('update', self.workspace)
+            self.assertEqual(caught.exception.code, 'INCOMPLETE_INVENTORY')
+        self.assertEqual((self.workspace / 'state.json').read_bytes(), before)
+
+    def test_source_update_can_resume_after_interrupted_export(self):
+        (self.repo / 'a.py').write_text('def a(): return 3\n')
+        operate('update', self.workspace)
+        with patch('molekit.markdown.atomic_text', side_effect=OSError('interrupt')):
+            with self.assertRaises(OSError):
+                operate('finish', self.workspace, output=self.output, allow_partial=True)
+        self.assertEqual(load(self.workspace)['status'], 'EXPORTING')
+        (self.repo / 'a.py').write_text('def a(): return 4\n')
+        result = operate('update', self.workspace)
+        self.assertEqual(result['changes']['changed'], ['a.py'])
+        self.assertNotIn('pendingExport', load(self.workspace))
+        operate('finish', self.workspace, output=self.output, allow_partial=True)
+
+    def test_unrelated_edit_in_same_file_keeps_unchanged_span_claim(self):
+        from molekit.workspace import save_state
+        (self.repo / 'a.py').write_text('def a(): return 1\n\ndef untouched(): return 5\n')
+        operate('update', self.workspace)
+        state = load(self.workspace)
+        operation = next(op for op in state['scan']['model']['operations'] if op['title'] == 'a.untouched' and op['kind'] == 'function')
+        state['scan']['model']['claims'].append({'id': 'claim-untouched', 'statement': 'untouched returns five',
+            'status': 'source_observed', 'evidenceIds': operation['evidenceIds'], 'limitations': []})
+        save_state(self.workspace, state)
+        (self.repo / 'a.py').write_text('# Unrelated new comment\ndef a(): return 99\n\ndef untouched(): return 5\n')
+        result = operate('update', self.workspace)
+        self.assertNotIn('claim-untouched', result['changes']['invalidatedClaims'])
+        claim = next(c for c in load(self.workspace)['scan']['model']['claims'] if c['id'] == 'claim-untouched')
+        self.assertEqual(claim['evidenceIds'], operation['evidenceIds'])

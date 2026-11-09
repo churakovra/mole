@@ -11,7 +11,7 @@ import time
 
 from molekit.errors import MoleError
 from molekit.model import empty_model, validate_model
-from molekit.workspace import atomic_json, read_json
+from molekit.workspace import atomic_json, read_json, read_snapshot
 from molekit.safety import read_source
 
 PARSER_VERSION = "python-ast-v5-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
@@ -171,6 +171,24 @@ def inventory(repo, workspace, excluded=(), scope="repository"):
     return records, limitations
 
 
+def inventory_status(records, limitations, baseline=()):
+    """Missing input is deletion evidence only after complete enumeration."""
+    present = {record['path'] for record in records}
+    missing = {record['path'] for record in baseline} - present
+    global_failures = {'inventory_budget_exceeded', 'directory_depth_budget_exceeded',
+                       'ignore_rules_budget_exceeded', 'analysis_time_budget_exceeded'}
+    uncertain = {'symlink_excluded', 'file_too_large', 'source_unavailable_or_budget', 'non_utf8'}
+    unknown = set()
+    failed = any(item['reason'] in global_failures for item in limitations)
+    for item in limitations:
+        if item['reason'] in uncertain:
+            unknown.update(path for path in missing if path == item['path'] or path.startswith(item['path'] + '/'))
+    if failed:
+        unknown.update(missing)
+    return {'complete': not failed and not unknown, 'unknownPaths': sorted(unknown),
+            'limitations': [item for item in limitations if item['reason'] in global_failures or item['reason'] in uncertain]}
+
+
 from molekit.python_ast import Extractor
 
 
@@ -197,7 +215,7 @@ def scan(repo, workspace, excluded=(), scope="repository"):
     deadline = time.monotonic() + 60
     records, limitations = inventory(repo, workspace, excluded, scope)
     cache_path = Path(workspace) / "scan-cache.json"
-    cache = read_json(cache_path) if cache_path.exists() else {}
+    cache = read_snapshot(cache_path) if cache_path.exists() else {}
     if not isinstance(cache, dict):
         cache = {}
     revision = sha((PARSER_VERSION + "\n" + "\n".join(r["path"] + ":" + r["hash"] for r in records)).encode())
@@ -290,7 +308,8 @@ def scan(repo, workspace, excluded=(), scope="repository"):
 
     from molekit.flow import connect
     graph = connect(model, facts, symbols, records, evidence)
-    atomic_json(cache_path, facts)
+    from molekit.snapshots import save
+    save(cache_path, facts, workspace, atomic_json)
     validate_model(model)
     index = [{"path": r["path"], "hash": r["hash"]} for r in records]
     return {"model": model, "parserVersion": PARSER_VERSION, "index": index, "facts": facts, "unresolved": graph["unresolved"], **graph,

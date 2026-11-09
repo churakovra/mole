@@ -11,7 +11,7 @@ The original fourteen local branches are preserved. Repairs are stacked separate
 | --- | --- | --- |
 | Flow foundation | feature/rc2-01-flow-foundation | Cross-file import/alias/re-export/self/class candidates, conditional regions, receiver-aware adapters and workflow task scope |
 | Knowledge | feature/rc2-02-workflow-knowledge | Implemented: workflow-first overview, connected module components, shared callable drill-downs and numbered Markdown paths/effects/failures |
-| Integrity | feature/rc2-03-generation-integrity | Pending: semantic gates, incomplete-inventory rejection, sharded workspace, output transactions and collection paging |
+| Integrity | feature/rc2-03-generation-integrity | Implemented: separate semantic/extraction/export gates, explicit claim review, incomplete-inventory rejection, sharded snapshots, immutable export generations and complete operation paging |
 | Diagram UX | feature/rc2-04-diagram-ux | Pending: topology-aware layout, portable overrides and conflict resolution |
 | Evidence | feature/rc2-05-review-evidence | Pending: source-review bundle, measured checks, compatibility and release notes |
 
@@ -40,3 +40,7 @@ add a dependency or weaken the Python-first unsupported-syntax boundary.
 
 RC2-02 review repairs: bounded shared/cyclic navigation, active diagram fragments,
 and retained evidence-empty claim scope. The actual dense SCC browser test passed.
+
+RC2-03 independent review identified and verified repairs for per-scope semantic
+coverage and untracked/inaccessible authored output assets. Publication fails
+closed; prior generations remain authoritative after interrupted staging.
