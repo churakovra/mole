@@ -157,10 +157,12 @@ def load(directory):
             raise MoleError("STATE_CORRUPT", "Workspace revisions disagree.", 5)
         task_ids = set()
         evidence_ids = {ev["id"] for ev in scan["model"]["evidence"]}
+        operation_ids = {op["id"] for op in scan["model"]["operations"]}
         for task in state["tasks"]:
             contract(task, "task")
             if (task["id"] in task_ids or task["baseRevision"] != state["revision"]
-                    or not set(task["evidenceIds"]) <= evidence_ids):
+                    or not set(task["evidenceIds"]) <= evidence_ids
+                    or not set(task.get("operationIds", [])) <= operation_ids):
                 raise MoleError("STATE_CORRUPT", "Task references or revision are invalid.", 5)
             task_ids.add(task["id"])
         if "semantic" in scan:

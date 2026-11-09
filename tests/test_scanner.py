@@ -28,7 +28,7 @@ class ScannerTests(unittest.TestCase):
         path = self.repo / "app.py"
         path.write_text("def child():\n    return 1\ndef parent():\n    return child() + child()\n")
         first = scan(self.repo, self.workspace)
-        self.assertEqual(len(first["model"]["relationships"]), 2)
+        self.assertEqual(sum(edge["kind"] == "calls" for edge in first["model"]["relationships"]), 2)
         self.assertTrue(all(e["resolution"] == "possible" for e in first["model"]["relationships"]))
         second = scan(self.repo, self.workspace)
         self.assertEqual(second["stats"]["reused"], 1)

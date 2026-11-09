@@ -14,7 +14,7 @@ from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json
 from molekit.safety import read_source
 
-PARSER_VERSION = "python-ast-v3-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v5-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
@@ -171,82 +171,26 @@ def inventory(repo, workspace, excluded=(), scope="repository"):
     return records, limitations
 
 
-def called_name(node):
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        parent = called_name(node.value)
-        return (parent + "." if parent else "") + node.attr
-    return "<dynamic>"
-
-
-class Extractor(ast.NodeVisitor):
-    def __init__(self):
-        self.owner = []
-        self.symbols = []
-        self.calls = []
-        self.branches = []
-        self.imports = []
-
-    def visit_Import(self, node):
-        self.imports.extend({"module": alias.name, "alias": alias.asname or alias.name,
-                             "line": node.lineno} for alias in node.names)
-
-    def visit_ImportFrom(self, node):
-        self.imports.extend({"module": (node.module or "") + "." + alias.name,
-                             "alias": alias.asname or alias.name, "line": node.lineno}
-                            for alias in node.names)
-
-    def visit_FunctionDef(self, node):
-        self.symbol(node, "function")
-
-    def visit_AsyncFunctionDef(self, node):
-        self.symbol(node, "async_function")
-
-    def visit_ClassDef(self, node):
-        self.symbol(node, "class")
-
-    def symbol(self, node, kind):
-        self.owner.append(node.name)
-        name = ".".join(self.owner)
-        self.symbols.append({"name": name, "kind": kind, "line": node.lineno,
-                             "end": node.end_lineno,
-                             "decorators": [called_name(d.func if isinstance(d, ast.Call) else d)
-                                            for d in node.decorator_list]})
-        self.generic_visit(node)
-        self.owner.pop()
-
-    def visit_Call(self, node):
-        self.calls.append({"owner": ".".join(self.owner) if self.owner else "<module>",
-                           "target": called_name(node.func), "line": node.lineno,
-                           "end": node.end_lineno, "column": node.col_offset})
-        self.generic_visit(node)
-
-    def generic_visit(self, node):
-        if self.owner and isinstance(node, (ast.If, ast.For, ast.While, ast.Try, ast.Raise,
-                                            ast.Await, ast.With, ast.AsyncWith, ast.Return)):
-            self.branches.append({"owner": ".".join(self.owner), "kind": type(node).__name__,
-                                  "line": node.lineno, "end": node.end_lineno})
-        super().generic_visit(node)
+from molekit.python_ast import Extractor
 
 
 def extract(content, path):
     try:
         tree = ast.parse(content, filename=path)
     except SyntaxError:
-        return {"symbols": [], "calls": [], "branches": [], "imports": [],
+        return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [],
                 "limitation": "PARSER_UNSUPPORTED_SYNTAX"}
     except (ValueError, RecursionError):
-        return {"symbols": [], "calls": [], "branches": [], "imports": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
-    extractor = Extractor()
+        return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
+    extractor = Extractor(redact)
     try:
         extractor.visit(tree)
     except RecursionError:
-        return {"symbols": [], "calls": [], "branches": [], "imports": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
+        return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
     if sum(len(items) for items in (extractor.symbols, extractor.calls, extractor.branches, extractor.imports)) > 10000:
-        return {"symbols": [], "calls": [], "branches": [], "imports": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
+        return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
     return {"symbols": extractor.symbols, "calls": extractor.calls,
-            "branches": extractor.branches, "imports": extractor.imports}
+            "branches": extractor.branches, "imports": extractor.imports, "bindings": extractor.bindings}
 
 
 def scan(repo, workspace, excluded=(), scope="repository"):
@@ -261,19 +205,33 @@ def scan(repo, workspace, excluded=(), scope="repository"):
     facts = {}
     reused = 0
     symbols = {}
+    source_spans, evidence_ids, symbol_records, operation_records = {}, set(), {}, {}
+    span_occurrences = {}
+    record_lines = {r["path"]: r["content"].splitlines() for r in records}
 
     def evidence(record, line, end, observation, kind="source_code"):
-        source_id = identity("src", record["path"] + ":" + str(line) + ":" + str(end) + ":" + record["hash"])
-        ev_id = identity("ev", source_id + observation)
-        if not any(s["id"] == source_id for s in model["sources"]):
+        lines = record_lines[record["path"]][line - 1:end]
+        fingerprint = sha("\n".join(lines).encode())
+        key = (record["path"], line, end)
+        if key not in source_spans:
+            anchor = observation
+            # Disambiguate equal text/observations without baking line numbers
+            # into identity. Unrelated insertions then retain unchanged spans.
+            counter_key = (record["path"], fingerprint, anchor)
+            occurrence = span_occurrences.get(counter_key, 0)
+            span_occurrences[counter_key] = occurrence + 1
+            source_id = identity("src", record["path"] + ":" + anchor + ":" + fingerprint + ":" + str(occurrence))
+            source_spans[key] = (source_id, fingerprint, anchor)
             model["sources"].append({"id": source_id, "path": record["path"], "revision": revision,
                                       "lineStart": line, "lineEnd": end, "kind": kind})
-        if not any(e["id"] == ev_id for e in model["evidence"]):
-            lines = record["content"].splitlines()[line - 1:end]
+        source_id = source_spans[key][0]
+        ev_id = identity("ev", source_id + observation)
+        if ev_id not in evidence_ids:
+            evidence_ids.add(ev_id)
             model["evidence"].append({"id": ev_id, "sourceId": source_id, "observation": observation,
-                                       "extractor": PARSER_VERSION, "excerptHash": sha("\n".join(lines).encode()),
-                                       "classification": kind if kind != "source_code" else
-                                       "test_source" if "tests" in Path(record["path"]).parts or Path(record["path"]).name.startswith("test_") else "source_code"})
+                "extractor": PARSER_VERSION, "excerptHash": fingerprint,
+                "classification": kind if kind != "source_code" else
+                "test_source" if "tests" in Path(record["path"]).parts or Path(record["path"]).name.startswith("test_") else "source_code"})
         return source_id, ev_id
 
     for record in records:
@@ -294,12 +252,13 @@ def scan(repo, workspace, excluded=(), scope="repository"):
         previous = cache.get(path, {})
         cached = previous.get("facts") if isinstance(previous, dict) else None
         valid_cache = isinstance(cached, dict) and all(isinstance(cached.get(k), list)
-                                                     for k in ("symbols", "calls", "branches", "imports"))
+                                                     for k in ("symbols", "calls", "branches", "imports", "bindings"))
         if valid_cache:
             for key, required in {"symbols": {"name": str, "kind": str, "line": int, "end": int, "decorators": list},
                                   "calls": {"owner": str, "target": str, "line": int, "end": int, "column": int},
                                   "branches": {"owner": str, "kind": str, "line": int, "end": int},
-                                  "imports": {"module": str, "alias": str, "line": int}}.items():
+                                  "imports": {"module": str, "alias": str, "line": int},
+                                  "bindings": {"owner": str, "name": str, "type": str, "line": int}}.items():
                 valid_cache = valid_cache and all(isinstance(item, dict) and all(
                     isinstance(item.get(field), kind) for field, kind in required.items()) for item in cached[key])
         if valid_cache and previous.get("hash") == record["hash"] and previous.get("parser") == PARSER_VERSION:
@@ -313,42 +272,26 @@ def scan(repo, workspace, excluded=(), scope="repository"):
         for symbol in extracted["symbols"]:
             qualified = path.removesuffix(".py").replace("/", ".") + "." + symbol["name"]
             sid = identity("symbol", qualified)
-            source, ev = evidence(record, symbol["line"], symbol["end"], "Declared " + symbol["kind"] + " " + qualified)
-            existing = next((s for s in model["symbols"] if s["id"] == sid), None)
+            source, ev = evidence(record, symbol.get("decoratorLine", symbol["line"]), symbol["end"], "Declared " + symbol["kind"] + " " + qualified)
+            existing = symbol_records.get(sid)
             if existing:
                 if source not in existing["sourceRefs"]:
                     existing["sourceRefs"].append(source)
-                operation = next(o for o in model["operations"] if o["id"] == identity("op", qualified))
+                operation = operation_records[identity("op", qualified)]
                 if ev not in operation["evidenceIds"]:
                     operation["evidenceIds"].append(ev)
             else:
                 model["symbols"].append({"id": sid, "kind": symbol["kind"], "qualifiedName": qualified, "sourceRefs": [source]})
                 model["operations"].append({"id": identity("op", qualified), "kind": symbol["kind"],
                                              "title": qualified, "evidenceIds": [ev]})
+            symbol_records[sid] = model["symbols"][-1] if not existing else existing
+            operation_records[identity("op", qualified)] = model["operations"][-1] if not existing else operation
             symbols[(path, symbol["name"])] = sid
 
-    unresolved = []
-    for record in records:
-        if time.monotonic() > deadline:
-            limitations.append({"path": ".", "reason": "analysis_time_budget_exceeded"})
-            break
-        path = record["path"]
-        if path not in facts:
-            continue
-        for call in facts[path]["facts"]["calls"]:
-            source = symbols.get((path, call["owner"]))
-            candidates = [sid for (p, name), sid in symbols.items() if p == path and name == call["target"]]
-            _, ev = evidence(record, call["line"], call["end"], "Possible call to " + call["target"])
-            if source and len(candidates) == 1:
-                model["relationships"].append({"id": identity("edge", path + str(call["line"]) + ":" + str(call["column"]) + call["owner"] + call["target"]),
-                    "source": source, "target": candidates[0], "kind": "calls", "resolution": "possible",
-                    "evidenceIds": [ev], "condition": "Static call site; runtime reachability unproven"})
-            else:
-                unresolved.append({"evidenceId": ev, "target": call["target"], "owner": source})
-        for branch in facts[path]["facts"]["branches"]:
-            evidence(record, branch["line"], branch["end"], branch["kind"] + " control boundary")
+    from molekit.flow import connect
+    graph = connect(model, facts, symbols, records, evidence)
     atomic_json(cache_path, facts)
     validate_model(model)
     index = [{"path": r["path"], "hash": r["hash"]} for r in records]
-    return {"model": model, "parserVersion": PARSER_VERSION, "index": index, "facts": facts, "unresolved": unresolved,
+    return {"model": model, "parserVersion": PARSER_VERSION, "index": index, "facts": facts, "unresolved": graph["unresolved"], **graph,
             "limitations": limitations, "stats": {"files": len(index), "parsed": len(facts) - reused, "reused": reused}}

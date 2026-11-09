@@ -13,19 +13,14 @@ def create_tasks(scan, mode):
     model = scan["model"]
     budget = {"quick": 20, "standard": 100, "deep": 500}[mode]
     tasks = []
-    for symbol in model["symbols"]:
-        evidence = [e["id"] for e in model["evidence"] if e["sourceId"] in symbol["sourceRefs"]]
-        related = [r for r in model["relationships"] if r["source"] == symbol["id"]]
-        for edge in related:
-            evidence.extend(edge["evidenceIds"])
-        critical = any(e["ownerId"] == symbol["id"] and e["kind"] in
-                       {"publish", "acknowledgement", "transaction_boundary", "db_write"}
-                       for e in scan.get("events", []))
-        task = {"id": identity("task", symbol["id"]), "kind": "semantic_review",
-                "priority": "critical" if critical else "normal",
-                "question": "Explain purpose, success/failure paths and evidence limits of " + symbol["qualifiedName"],
-                "evidenceIds": list(dict.fromkeys(evidence))[:30],
-                "baseRevision": model["revision"], "status": "pending",
+    from molekit.flow import workflows
+    candidates = workflows(scan)
+    for workflow in candidates:
+        task = {"id": identity("task", workflow["id"]), "kind": "workflow_review" if workflow["kind"] == "workflow" else "component_review",
+                "priority": "critical" if workflow["critical"] else "normal",
+                "question": "Reconstruct the bounded workflow, purpose, ordered paths, exceptions and evidence limits: " + workflow["title"],
+                "scopeKind": workflow["kind"], "scopeId": workflow["id"], "operationIds": workflow["operationIds"],
+                "evidenceIds": workflow["evidenceIds"], "baseRevision": model["revision"], "status": "pending",
                 "responseSchema": "semantic-patch.v1"}
         contract(task, "task")
         tasks.append(task)
@@ -37,7 +32,7 @@ def create_tasks(scan, mode):
                     "status": "pending", "responseSchema": "semantic-patch.v1"}
             contract(task, "task")
             tasks.append(task)
-    tasks.sort(key=lambda task: (task["priority"] != "critical", task["id"]))
+    tasks.sort(key=lambda task: (task["priority"] != "critical", task.get("scopeKind") != "workflow", task["id"]))
     if len(tasks) > budget:
         scan["limitations"].append({"path": ".", "reason": "semantic_task_budget_exceeded"})
     return tasks[:budget]
@@ -67,7 +62,8 @@ def inspect(state, task, budget, cursor):
     sources = {s["id"]: s for s in model["sources"]}
     repo = Path(state["manifest"]["repo"]).resolve()
     operations = [{"id": op["id"], "title": op["title"][:200]} for op in model["operations"]
-                  if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])]
+                  if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])
+                  and ("operationIds" not in task or op["id"] in task["operationIds"])]
     result = {"taskId": task["id"], "baseRevision": state["revision"], "context": [], "nextCursor": None}
     if evidence_index == 0 and line_offset == 0:
         result["operations"] = []
@@ -129,6 +125,8 @@ def accept_patch(state, task, patch):
     claim_ids = {claim["id"] for claim in patch["claims"]}
     allowed_operations = {op["id"] for op in candidate["operations"]
                           if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])}
+    if "operationIds" in task:
+        allowed_operations &= set(task["operationIds"])
     for group in ("scenarios", "businessSteps", "glossary"):
         additions = patch.get(group, [])
         for entity in additions:

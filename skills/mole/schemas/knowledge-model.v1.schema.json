@@ -184,6 +184,27 @@
             "items": {
               "type": "string"
             }
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "sourceOrder": {
+            "type": "integer"
+          },
+          "control": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourcePattern": {
+            "type": "string"
+          },
+          "uncertainty": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [

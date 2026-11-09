@@ -52,9 +52,9 @@ def retain_renamed_ids(old_scan, new_scan, renames):
         matches = [op for op in old_model["operations"]
                    if op["kind"] == operation["kind"] and op["title"] == operation["title"]
                    and (operation["kind"] in {"function", "async_function", "class"} or
-                       [(old_sources[old_evidence[e]["sourceId"]]["path"], old_sources[old_evidence[e]["sourceId"]]["lineStart"])
+                       [(old_sources[old_evidence[e]["sourceId"]]["path"], old_evidence[e]["excerptHash"])
                         for e in op["evidenceIds"]] ==
-                       [(new_sources[new_evidence[e]["sourceId"]]["path"], new_sources[new_evidence[e]["sourceId"]]["lineStart"])
+                       [(new_sources[new_evidence[e]["sourceId"]]["path"], new_evidence[e]["excerptHash"])
                         for e in operation["evidenceIds"]])]
         if len(matches) == 1:
             mapping[operation["id"]] = matches[0]["id"]
@@ -105,6 +105,9 @@ def retain_renamed_ids(old_scan, new_scan, renames):
             item["id"] = resolved[item["id"]]
         return resolved
     mapping = allocate(model["symbols"] + model["operations"], mapping)
+    for operation in model["operations"]:
+        if "ownerId" in operation:
+            operation["ownerId"] = mapping.get(operation["ownerId"], operation["ownerId"])
     for edge in model["relationships"]:
         edge["source"] = mapping.get(edge["source"], edge["source"])
         edge["target"] = mapping.get(edge["target"], edge["target"])
@@ -125,6 +128,17 @@ def retain_renamed_ids(old_scan, new_scan, renames):
     for event in new_scan["events"]:
         event["operationId"] = mapping.get(event["operationId"], event["operationId"])
         event["ownerId"] = mapping.get(event["ownerId"], event["ownerId"])
+        if "ownerOperationId" in event:
+            event["ownerOperationId"] = mapping.get(event["ownerOperationId"], event["ownerOperationId"])
+    new_scan["symbolOperations"] = {mapping.get(symbol, symbol): mapping.get(operation, operation)
+                                    for symbol, operation in new_scan.get("symbolOperations", {}).items()}
+    for collection in ("callSites", "controlBoundaries", "unresolved"):
+        for item in new_scan.get(collection, []):
+            for field in ("operationId", "ownerOperationId", "resolvedTarget", "owner"):
+                if field in item:
+                    item[field] = mapping.get(item[field], item[field])
+    for entry in new_scan.get("entryPoints", []):
+        entry["id"] = mapping.get(entry["id"], entry["id"])
     # Renamed code is re-reviewed: IDs are retained, claims are not silently
     # rewritten to pretend statements naming the old module remain current.
     validate_model(model)

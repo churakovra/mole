@@ -101,8 +101,9 @@ def validate_model(model):
         refs(operation["evidenceIds"], "evidence")
         if not operation["evidenceIds"]:
             raise MoleError("INSUFFICIENT_EVIDENCE", "Operation requires evidence.")
+    endpoints = groups["symbols"] | groups["operations"]
     for relation in model["relationships"]:
-        if any(relation[k] not in groups["symbols"] | groups["operations"]
+        if any(relation[k] not in endpoints
                for k in ("source", "target")):
             raise MoleError("DANGLING_REFERENCE", "Invalid relationship endpoint.")
         refs(relation["evidenceIds"], "evidence")
@@ -127,8 +128,9 @@ def validate_model(model):
                 raise MoleError("DANGLING_REFERENCE", "Invalid diagram node.")
         refs(view["edgeIds"], "relationships")
         node_ids = [node["id"] for node in view["nodes"]]
-        if len(node_ids) != len(set(node_ids)) or any(
-                lookup[edge][endpoint] not in node_ids
+        node_set = set(node_ids)
+        if len(node_ids) != len(node_set) or any(
+                lookup[edge][endpoint] not in node_set
                 for edge in view["edgeIds"] for endpoint in ("source", "target")):
             raise MoleError("INVALID_VIEW", "View has duplicate nodes or absent edge endpoints.")
     for term in model["glossary"]:

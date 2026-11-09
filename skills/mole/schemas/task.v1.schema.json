@@ -37,6 +37,18 @@
     },
     "responseSchema": {
       "type": "string"
+    },
+    "scopeKind": {
+      "type": "string"
+    },
+    "scopeId": {
+      "type": "string"
+    },
+    "operationIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
