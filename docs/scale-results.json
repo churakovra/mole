@@ -1,0 +1,80 @@
+[
+  {
+    "environment": {
+      "python": "3.15.2",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+    },
+    "measurement": {
+      "requestedSymbols": 10000,
+      "parsedSymbols": 10000,
+      "parserVersion": "python-ast-v6-3.15",
+      "status": "PASS",
+      "coverage": "PARTIAL",
+      "tasks": 100,
+      "taskPayloadBytes": 1335890,
+      "nextReplyBytes": 2858,
+      "inspectReplyBytes": 2499,
+      "workspacePointerBytes": 316,
+      "workspaceBytes": 98764793,
+      "sourceBytes": 428890,
+      "limitations": [
+        "diagram_node_budget_exceeded",
+        "diagram_view_budget_exceeded"
+      ],
+      "timings": {
+        "startSeconds": 0.0015,
+        "scanTasksSaveSeconds": 3.644,
+        "loadSeconds": 1.5626,
+        "inspectSeconds": 2.6786,
+        "composeExportSeconds": 13.3552,
+        "unchangedUpdateSeconds": 2.0859
+      },
+      "peakRssPlatformUnits": 541638656
+    },
+    "limitations": [
+      "Synthetic independent functions, not real service semantic quality.",
+      "Task/view bounds intentionally produce partial coverage.",
+      "Peak RSS is bytes on macOS and KiB on Linux; process includes all benchmark phases."
+    ]
+  },
+  {
+    "environment": {
+      "python": "3.15.2",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+    },
+    "measurement": {
+      "requestedSymbols": 50000,
+      "parsedSymbols": 50000,
+      "parserVersion": "python-ast-v6-3.15",
+      "status": "PASS",
+      "coverage": "PARTIAL",
+      "tasks": 100,
+      "taskPayloadBytes": 1335987,
+      "nextReplyBytes": 2862,
+      "inspectReplyBytes": 2530,
+      "workspacePointerBytes": 399949,
+      "workspaceBytes": 439605905,
+      "sourceBytes": 2188890,
+      "limitations": [
+        "diagram_node_budget_exceeded",
+        "diagram_view_budget_exceeded",
+        "uncovered_declaration_components:40000",
+        "workflow_candidate_budget_exceeded"
+      ],
+      "timings": {
+        "startSeconds": 0.0012,
+        "scanTasksSaveSeconds": 23.1817,
+        "loadSeconds": 9.2026,
+        "inspectSeconds": 11.1808,
+        "composeExportSeconds": 51.4753,
+        "unchangedUpdateSeconds": 10.6797
+      },
+      "peakRssPlatformUnits": 2336358400
+    },
+    "limitations": [
+      "Synthetic independent functions, not real service semantic quality.",
+      "Task/view bounds intentionally produce partial coverage.",
+      "Peak RSS is bytes on macOS and KiB on Linux; process includes all benchmark phases."
+    ]
+  }
+]

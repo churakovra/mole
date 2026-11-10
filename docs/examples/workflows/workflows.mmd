@@ -1,0 +1,115 @@
+%% mole:generated:start id=workflows.mmd
+%% MOLE snapshot a8fb55c9cd1e9eb9f6379a813e23c4b4c1e2167a07dfdada29b4dc4959721cf8
+%% Losses: nested navigation, evidence drawer, local edits, and full diagram semantics.
+%% Static candidates only; runtime behavior is not verified.
+%% PARTIAL
+flowchart LR
+  %% semantic-id call-11ad12a535a4dbbc83375123
+  n0["sqlalchemy.orm.Session.add"]
+  %% semantic-id call-224ecb47dab74f0ee69a9f0b
+  n1["repository.Store.save"]
+  %% semantic-id call-3f45c6f9b1899956ad775121
+  n2["#60;dynamic#62;.ack"]
+  %% semantic-id call-5a3fa4630ddc6cde917744bc
+  n3["sqlalchemy.orm.Session.commit"]
+  %% semantic-id call-66813f4e88db642d5b482dbe
+  n4["sqlalchemy.orm.Session.rollback"]
+  %% semantic-id call-6b39c8addf04edf14fe850ea
+  n5["aio_pika.Channel.declare_queue"]
+  %% semantic-id call-73ab4d50221a4636c78864c0
+  n6["#60;dynamic#62;.nack"]
+  %% semantic-id call-76c4073de3b85c7c6aafe34c
+  n7["repository.Store.validate"]
+  %% semantic-id call-7a194f23936534c744e83feb
+  n8["aio_pika.Exchange.publish"]
+  %% semantic-id call-93c5c91adbb9aeaef8a65109
+  n9["repository.Store"]
+  %% semantic-id call-a6ccf3d7057244ba8d57cd51
+  n10["publisher.publish_order"]
+  %% semantic-id call-ecf2d21d713d575a164067d0
+  n11["aio_pika.Channel.declare_queue.consume"]
+  %% semantic-id call-f4432cb0c93cebec6c41c48b
+  n12["service.execute"]
+  %% semantic-id component-summary-051939d9a3f88737e58b5f26
+  n13["repository.py"]
+  %% semantic-id component-summary-62edd7e1c2a25514f1a2be95
+  n14["publisher.py"]
+  %% semantic-id component-summary-63a870d9b5aa0dd175c2471c
+  n15["worker.py"]
+  %% semantic-id component-summary-819a135650a078ca393a8c0e
+  n16["api.py"]
+  %% semantic-id component-summary-85e0308ebbc3b7df279796ad
+  n17["worker.py"]
+  %% semantic-id component-summary-f99a22d3eea2f28517d68c77
+  n18["service.py"]
+  %% semantic-id control-014607b2ff7c0a15abb51524
+  n19["Return"]
+  %% semantic-id control-163e465ce98c3495f409494f
+  n20["Try"]
+  %% semantic-id control-5afb25217c15c01bf0d73e34
+  n21["Return"]
+  %% semantic-id control-642078aeb46d5526e4fa9d8d
+  n22["Raise"]
+  %% semantic-id control-bdba0eb2f5ced5762a1ea9de
+  n23["Try"]
+  %% semantic-id control-cdbc27a13cfa4ef792941a5a
+  n24["Return"]
+  %% semantic-id control-eb9ac58e2c8fd047974f7875
+  n25["Return"]
+  %% semantic-id entry-b239d0587464f371b7001737
+  n26["HTTP route#58; api.create_order"]
+  %% semantic-id op-070fa1efa572094057eba756
+  n27["repository.Store"]
+  %% semantic-id op-08623c4113c609e1113ce9be
+  n28["api.create_order"]
+  %% semantic-id op-371313d299b733473fa811b8
+  n29["service.execute"]
+  %% semantic-id op-3e29f94a0962b2073aa8e986
+  n30["repository.Store.save"]
+  %% semantic-id op-54a5cbd1dcd292ab05462ea1
+  n31["publisher.publish_order"]
+  %% semantic-id op-6500220ccbcbfcfefc90d90f
+  n32["worker.register"]
+  %% semantic-id op-8cda7963126f381747043f9d
+  n33["repository.Store.validate"]
+  %% semantic-id op-b1577e1682ca0dfd55998ca5
+  n34["worker.handle_order"]
+  %% semantic-id scenario-summary-6fe38e317b0c1634229171f2
+  n35["Order processing #40;static candidate#41;"]
+  %% semantic-id scenario-summary-aeed69e5be645a181358fe63
+  n36["Component review#58; worker"]
+  n12 -. "calls" .-> n29
+  n7 -. "calls" .-> n33
+  n9 -. "calls" .-> n27
+  n1 -. "calls" .-> n30
+  n10 -. "calls" .-> n31
+  n28 -. "contains" .-> n12
+  n12 -. "lexical_next_candidate" .-> n21
+  n31 -. "contains" .-> n8
+  n30 -. "contains" .-> n23
+  n23 -. "branch_candidate" .-> n7
+  n7 -. "lexical_next_candidate" .-> n0
+  n0 -. "lexical_next_candidate" .-> n3
+  n3 -. "lexical_next_candidate" .-> n19
+  n23 -. "exception_path_candidate" .-> n4
+  n4 -. "lexical_next_candidate" .-> n22
+  n33 -. "contains" .-> n24
+  n29 -. "contains" .-> n9
+  n9 -. "lexical_next_candidate" .-> n1
+  n1 -. "lexical_next_candidate" .-> n10
+  n10 -. "lexical_next_candidate" .-> n25
+  n34 -. "contains" .-> n20
+  n20 -. "branch_candidate" .-> n2
+  n20 -. "exception_path_candidate" .-> n6
+  n32 -. "contains" .-> n5
+  n5 -. "lexical_next_candidate" .-> n11
+  n26 -. "dispatch_candidate" .-> n28
+  n11 -. "invokes_handler_candidate" .-> n34
+  n16 -. "calls" .-> n18
+  n14 -. "message_channel_candidate" .-> n15
+  n18 -. "calls" .-> n13
+  n18 -. "calls" .-> n14
+%% mole:generated:end id=workflows.mmd
+
+%% mole:manual:start
+%% mole:manual:end

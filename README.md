@@ -2,17 +2,23 @@
 
 **Mapping Operations, Logic & Evidence** — Follow the code. Find the why.
 
-MOLE is being built as a self-contained Agent Skill with a bundled Python
-engine, `molekit`. The current development version implements PR-01 bootstrap
-diagnostics only. Repository analysis, persistent workspaces, documentation,
-and diagram exports are planned; they are not available in this version.
+MOLE is a self-contained Agent Skill (`$mole`) with a bundled Python engine,
+`molekit`. It inventories source, asks the agent bounded evidence-backed questions,
+and compiles a shared knowledge model into Markdown, offline HTML and draw.io.
 
-## Install and check
+**Current version: 0.1.0, an unreleased review candidate.** Implementation is
+available locally; [release acceptance gaps](docs/release-readiness.md) remain.
+Static candidates are not verified runtime behavior.
 
-Copy the entire `skills/mole/` directory to your agent's supported skill location.
-It must retain `SKILL.md`, `scripts/`, `molekit/`, and the other bundled files.
-Use a shell with Python 3.11+; no pip, uv, npm, MCP, API key, or engine setup is required.
-From any working directory, using the absolute path to your installed copy:
+## Install
+
+Copy the **entire** `skills/mole/` directory to your agent's supported skill
+location. Keep its scripts, engine, schemas, references, assets and license
+alongside SKILL.md. The installed skill requires a shell and Python 3.11+.
+There is no pip/uv/npm installation, separate engine setup, Node, Docker, MCP,
+API key or network bootstrap. Node/Chrome are development-only browser-test tools.
+
+From any working directory, use the absolute installed path:
 
 ```bash
 python3 /absolute/path/to/mole/scripts/mole.py doctor --json
@@ -20,27 +26,90 @@ python3 /absolute/path/to/mole/scripts/mole.py --version
 python3 /absolute/path/to/mole/scripts/mole.py --help
 ```
 
-On Windows, use a Python 3.11+ interpreter and quote paths containing spaces.
-Invoke `$mole` in a compatible agent to run diagnostics. A successful doctor
-result confirms the bootstrap runtime only, not analysis or release readiness.
-Diagnostics do not read target projects, install dependencies, or access the network.
+On Windows, choose a Python 3.11+ interpreter and quote paths containing spaces.
+An incomplete payload or unsupported interpreter produces an explicit error.
 
-`doctor` emits human-readable text by default; `--json` emits one JSON document.
-Exit codes: `0` success, `2` invalid command line, `3` unsupported Python.
-Errors emit JSON containing a code, message, recoverability, and suggested action.
-The full versioned workflow protocol is reserved for PR-02.
+## Agent workflow
 
-## Development
+Invoke `$mole` in a compatible shell-enabled agent with your question, audience,
+and desired scope. The agent follows the bundled [protocol](skills/mole/references/agent-protocol.md):
+
+1. Start/resume a workspace, preferably outside the source repository for read-only analysis.
+2. Use next and paginated inspect to investigate source-backed tasks.
+3. Submit revision-bound claims and optional named scenarios, business mappings and glossary entries.
+4. Finish/export to a dedicated output directory; report unknowns and partial coverage explicitly.
+5. Use diff/update after source changes, then review affected tasks and regenerate.
+
+For example, after resolving the installed skill directory:
+
+```bash
+python3 /absolute/path/to/mole/scripts/mole.py start \
+  --repo /absolute/target/repo --workspace /absolute/workspace \
+  --mode standard --scope repository --json
+python3 /absolute/path/to/mole/scripts/mole.py next --workspace /absolute/workspace --json
+```
+
+Scope can also be a repository-relative file or directory. The engine owns
+state/validation and never calls an LLM API. Its tasks require the current agent's
+reasoning; it does not claim to infer business intent by itself.
+
+## Outputs and preservation
+
+Markdown is always included: a workflow catalog, component architecture, process
+pages, quality report, and glossary when supplied. HTML is a portable single file
+with tree/search, evidence details, nested navigation, keyboard controls,
+Fit-relative zoom, local scrolling/pan, and browser-local editing.
+The draw.io export is multipage with stable IDs/internal links. Mermaid is
+optional and explicitly lossy. Select only Markdown with `--format markdown`.
+See the [CLI reference](docs/cli-reference.md) and [Confluence guide](skills/mole/references/confluence-export.md).
+
+Generated Markdown/output sections are checked against their previous base.
+Authored changes conflict rather than being silently overwritten; manual sections
+survive updates. Changed evidence reopens affected tasks. Exact unique renames
+retain semantic identity, while ambiguous cases remain explicit.
+Browser-local edits use field hashes and portable JSON export/import. Conflicts
+show previous/current generated values with explicit resolution choices. These
+presentation edits do not change the canonical model or Markdown.
+
+Exports publish immutable generations under a dedicated container. Open
+`MOLE-OPEN.html` or resolve `current.json`; the returned `output` is the active
+bundle. Previous generations remain intact, manual sections carry forward,
+and untracked authored assets stop regeneration until preserved externally.
+
+Inspect the [example catalog](docs/examples/workflows/README.md),
+[offline explorer](docs/examples/workflows/explorer.html), and
+[draw.io file](docs/examples/workflows/confluence/workflows.drawio).
+
+## Boundaries
+
+Python-first analysis uses host-version AST and detected-framework heuristics
+for FastAPI/Starlette, Django, SQLAlchemy, asyncio and messaging candidates.
+Dynamic dispatch, ambiguous cross-module references, broker guarantees, deployment order,
+and business rules may remain unknown. Unsupported source languages receive
+reduced-coverage text review; documents can represent intended workflows.
+Ignore rules support ordinary glob, slash, ** and negation patterns; Git escaped
+pattern edge cases are unsupported. Diagrams use SCC/layer topology with bounded gutter routes;
+dense connector crossings are possible. Modes bound semantic task counts, not prove
+coverage. See [security boundaries](docs/security-model.md).
+
+No target-project code/tests/migrations are executed, no dependencies installed,
+and no network, upload, commit, push or publication is performed by the engine.
+Secret suppression is heuristic; review outputs before sharing them.
+
+## Development and review
 
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py' -v
-git diff --check
+python3 tools/evaluate.py --output /tmp/mole-evaluation.json
+python3 tools/package_skill.py --output /tmp/mole-review.zip
+python3 tools/package_source.py --output /tmp/mole-source-review.zip
 ```
 
-Tests copy only the skill into a temporary location, run from outside the project,
-disable site packages, and deny network/process creation inside the CLI process.
-CI defines Python 3.11 and 3.14 checks on Linux, macOS, and Windows.
+The tests exercise an isolated copy of only the skill, complete CLI workflow
+with network/process denial, persistence/update failures, source/JSON/security
+boundaries, XML/XSD (when configured), and actual Chrome interactions/geometry.
+See [evaluation evidence](docs/evaluation.md), [branch status](DEVELOPMENT-STATUS.md),
+and [contribution guidance](CONTRIBUTING.md). The three original planning documents
+remain unchanged references. No branch has been merged, pushed or released.
 
-The skill payload owns all runtime imports. Tests and CI stay at repository level.
-Version `0.1.0.dev1` identifies this bootstrap; it is not the planned `1.0.0` release.
-Licensed under Apache-2.0; see [LICENSE](LICENSE).
+Licensed under [Apache-2.0](LICENSE). The same license is included in the skill payload.

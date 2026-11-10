@@ -62,7 +62,8 @@ class InstalledSkillTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertTrue(payload["checks"]["pythonSupported"])
         self.assertTrue(payload["checks"]["bundledEngine"])
-        self.assertEqual(payload["capabilities"], ["doctor"])
+        self.assertIn("doctor", payload["capabilities"])
+        self.assertIn("update", payload["capabilities"])
         self.assertEqual(result.stderr, "")
         self.assertFalse((self.cwd / ".mole").exists())
 
@@ -74,10 +75,51 @@ class InstalledSkillTests(unittest.TestCase):
                 self.assertTrue(result.stdout.strip())
                 self.assertEqual(result.stderr, "")
 
+    def test_first_release_version(self):
+        self.assertEqual(self.run_cli("--version").stdout.strip(), "0.1.0")
+
     def test_human_doctor(self):
         result = self.run_cli("doctor")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Bootstrap only", result.stdout)
+        self.assertIn("Static analysis", result.stdout)
+
+    def test_incomplete_payload_returns_structured_error(self):
+        (self.installed / "molekit/errors.py").unlink()
+        result = self.run_cli("doctor", "--json")
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
+
+    def test_missing_control_flow_module_is_incomplete_payload(self):
+        (self.installed / "molekit/control_flow.py").unlink()
+        result = self.run_cli("doctor", "--json")
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
+
+    def test_installed_scan_offline_without_target_execution(self):
+        (self.cwd / "app.py").write_text("raise RuntimeError('target code executed')\ndef f(): return 1\n")
+        workspace = self.root / "workspace"
+        result = self.run_cli("start", "--repo", str(self.cwd), "--workspace", str(workspace), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_cli("next", "--workspace", str(workspace), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(json.loads(result.stdout)["revision"])
+        task = json.loads(result.stdout)["task"]
+        result = self.run_cli("inspect", "--workspace", str(workspace), "--task", task["id"], "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        response = self.root / "patch.json"
+        response.write_text(json.dumps({"protocolVersion": "1.0", "taskId": task["id"],
+            "baseRevision": task["baseRevision"], "claims": [{"id": "claim-f",
+            "statement": "A function is declared", "status": "source_observed",
+            "evidenceIds": task["evidenceIds"], "limitations": []}]}))
+        result = self.run_cli("submit", "--workspace", str(workspace), "--input", str(response), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = self.root / "output"
+        result = self.run_cli("finish", "--workspace", str(workspace), "--output", str(output), "--allow-partial", "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = Path(json.loads(result.stdout)["output"])
+        self.assertTrue((output / "README.md").is_file())
+        self.assertTrue((output / "explorer.html").is_file())
+        self.assertTrue((output / "confluence/workflows.drawio").is_file())
 
     def test_invalid_requests(self):
         for args in [(), ("start",), ("doctor", "--repo", "."),

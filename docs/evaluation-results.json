@@ -1,0 +1,82 @@
+{
+  "environment": {
+    "python": "3.15.2",
+    "platform": "Darwin"
+  },
+  "fixtures": [
+    {
+      "fixture": "fastapi-db-events",
+      "goldenPatterns": "PASS",
+      "workflowScope": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 620,
+      "taskPayloadBytes": 1345,
+      "firstScanSeconds": 0.00240333399415249,
+      "cachedScanSeconds": 0.0020413750025909394,
+      "cache": {
+        "files": 1,
+        "parsed": 0,
+        "reused": 1
+      },
+      "staticEdgesOnly": true
+    },
+    {
+      "fixture": "django-transactions",
+      "goldenPatterns": "PASS",
+      "workflowScope": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 339,
+      "taskPayloadBytes": 944,
+      "firstScanSeconds": 0.0015750829988974147,
+      "cachedScanSeconds": 0.001534916002128739,
+      "cache": {
+        "files": 2,
+        "parsed": 0,
+        "reused": 2
+      },
+      "staticEdgesOnly": true
+    },
+    {
+      "fixture": "consumer-retry-idempotency",
+      "goldenPatterns": "PASS",
+      "workflowScope": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 319,
+      "taskPayloadBytes": 1102,
+      "firstScanSeconds": 0.0020832919981330633,
+      "cachedScanSeconds": 0.0016883339994819835,
+      "cache": {
+        "files": 1,
+        "parsed": 0,
+        "reused": 1
+      },
+      "staticEdgesOnly": true
+    },
+    {
+      "fixture": "cross-file-workflow",
+      "goldenPatterns": "PASS",
+      "workflowScope": "PASS",
+      "missingPatterns": [],
+      "sourceBytes": 1338,
+      "taskPayloadBytes": 3305,
+      "firstScanSeconds": 0.004030874995805789,
+      "cachedScanSeconds": 0.0042017499945359305,
+      "cache": {
+        "files": 5,
+        "parsed": 0,
+        "reused": 5
+      },
+      "staticEdgesOnly": true
+    }
+  ],
+  "tokens": "unavailable",
+  "llmLedBaseline": "NOT_RUN",
+  "negativeAdapterCheck": "PASS",
+  "multiModelEval": "NOT_RUN",
+  "semanticBlindReview": "NOT_RUN",
+  "limitations": [
+    "Measures parser/cache and fixture pattern checks only.",
+    "Task payload bytes are not token usage or demonstrated savings.",
+    "No light/medium/strong LLM endpoints or telemetry configured."
+  ]
+}

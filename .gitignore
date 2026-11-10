@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 .mole/
 .DS_Store
+artifacts/

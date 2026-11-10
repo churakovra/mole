@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:task:v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "normal"
+      ]
+    },
+    "question": {
+      "type": "string"
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "baseRevision": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed"
+      ]
+    },
+    "responseSchema": {
+      "type": "string"
+    },
+    "scopeKind": {
+      "type": "string"
+    },
+    "scopeId": {
+      "type": "string"
+    },
+    "operationIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewClaimIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "deferredOperationIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "priority",
+    "question",
+    "evidenceIds",
+    "baseRevision",
+    "status",
+    "responseSchema"
+  ],
+  "additionalProperties": false
+}

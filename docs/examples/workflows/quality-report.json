@@ -1,0 +1,14 @@
+{
+  "criticalUnknownCount": 1,
+  "export": "NOT_RUN",
+  "pendingTasks": 0,
+  "reasons": [
+    "Scopes without authored interpretation: 1",
+    "Authored scope/outcome/failure coverage remains incomplete",
+    "Unknown or contradicted claims: 1"
+  ],
+  "revision": "a8fb55c9cd1e9eb9f6379a813e23c4b4c1e2167a07dfdada29b4dc4959721cf8",
+  "semanticCoverage": "PARTIAL",
+  "semanticTruth": "Not proven by structural validation; agent review remains evidence-bounded",
+  "technicalAnalysis": "PASS"
+}

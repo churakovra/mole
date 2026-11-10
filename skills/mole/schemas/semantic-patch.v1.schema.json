@@ -1,0 +1,437 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:semantic-patch:v1",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "taskId": {
+      "type": "string"
+    },
+    "baseRevision": {
+      "type": "string"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "source_observed",
+              "runtime_verified",
+              "documented_intent",
+              "inferred",
+              "unknown",
+              "contradicted"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "status",
+          "evidenceIds",
+          "limitations"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "operationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outcomes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unknowns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "kind": {
+            "type": "string"
+          },
+          "entryOperationId": {
+            "type": "string"
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stateEffects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "operationId",
+                "description",
+                "claimIds",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "failurePaths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "type": "string"
+                },
+                "operationIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "condition",
+                "operationIds",
+                "outcome",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "trigger",
+          "operationIds",
+          "claimIds",
+          "outcomes",
+          "unknowns"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "businessSteps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          },
+          "operationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "what",
+          "why",
+          "operationIds",
+          "claimIds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "glossary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "term": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "term",
+          "definition",
+          "claimIds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "claimIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "unknown",
+            "contradicted"
+          ]
+        }
+      },
+      "required": [
+        "claimIds",
+        "evidenceIds",
+        "rationale",
+        "verdict"
+      ],
+      "additionalProperties": false
+    },
+    "scenarioAmendments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scenarioId": {
+            "type": "string"
+          },
+          "expectedHash": {
+            "type": "string"
+          },
+          "addOperationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addClaimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addOutcomes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addUnknowns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addSteps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "operationId": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "operationId",
+                "description",
+                "claimIds",
+                "condition"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "addFailurePaths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "type": "string"
+                },
+                "operationIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "condition",
+                "operationIds",
+                "outcome",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "addActors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addPreconditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addStateEffects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "scenarioId",
+          "expectedHash",
+          "addOperationIds",
+          "addClaimIds"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "taskId",
+    "baseRevision",
+    "claims"
+  ],
+  "additionalProperties": false
+}

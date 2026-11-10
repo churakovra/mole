@@ -16,3 +16,18 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
       - run: git diff --check
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      MOLE_BROWSER_EXECUTABLE: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: test -x "$MOLE_BROWSER_EXECUTABLE"
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python tools/evaluate.py --output /tmp/mole-evaluation.json
