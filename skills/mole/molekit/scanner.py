@@ -14,7 +14,7 @@ from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json, read_snapshot
 from molekit.safety import read_source
 
-PARSER_VERSION = "python-ast-v6-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v7-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
@@ -203,12 +203,15 @@ def extract(content, path):
     extractor = Extractor(redact)
     try:
         extractor.visit(tree)
+        if sum(len(items) for items in (extractor.symbols, extractor.calls, extractor.branches, extractor.imports)) > 10000:
+            return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
+        from molekit.control_flow import ControlFlow
+        control_edges, control_limits = ControlFlow(extractor).build(tree)
     except RecursionError:
         return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
-    if sum(len(items) for items in (extractor.symbols, extractor.calls, extractor.branches, extractor.imports)) > 10000:
-        return {"symbols": [], "calls": [], "branches": [], "imports": [], "bindings": [], "limitation": "PARSER_LIMIT_EXCEEDED"}
     return {"symbols": extractor.symbols, "calls": extractor.calls,
-            "branches": extractor.branches, "imports": extractor.imports, "bindings": extractor.bindings}
+            "branches": extractor.branches, "imports": extractor.imports, "bindings": extractor.bindings,
+            "controlEdges": control_edges, "controlLimitations": control_limits}
 
 
 def scan(repo, workspace, excluded=(), scope="repository"):
@@ -270,13 +273,14 @@ def scan(repo, workspace, excluded=(), scope="repository"):
         previous = cache.get(path, {})
         cached = previous.get("facts") if isinstance(previous, dict) else None
         valid_cache = isinstance(cached, dict) and all(isinstance(cached.get(k), list)
-                                                     for k in ("symbols", "calls", "branches", "imports", "bindings"))
+                                                     for k in ("symbols", "calls", "branches", "imports", "bindings", "controlEdges", "controlLimitations"))
         if valid_cache:
             for key, required in {"symbols": {"name": str, "kind": str, "line": int, "end": int, "decorators": list},
                                   "calls": {"owner": str, "target": str, "line": int, "end": int, "column": int},
                                   "branches": {"owner": str, "kind": str, "line": int, "end": int},
                                   "imports": {"module": str, "alias": str, "line": int},
-                                  "bindings": {"owner": str, "name": str, "type": str, "line": int}}.items():
+                                  "bindings": {"owner": str, "name": str, "type": str, "line": int},
+                                  "controlEdges": {"owner": str, "source": str, "target": str, "kind": str, "condition": str}}.items():
                 valid_cache = valid_cache and all(isinstance(item, dict) and all(
                     isinstance(item.get(field), kind) for field, kind in required.items()) for item in cached[key])
         if valid_cache and previous.get("hash") == record["hash"] and previous.get("parser") == PARSER_VERSION:
@@ -287,6 +291,8 @@ def scan(repo, workspace, excluded=(), scope="repository"):
         facts[path] = {"hash": record["hash"], "parser": PARSER_VERSION, "facts": extracted}
         if extracted.get("limitation"):
             limitations.append({"path": path, "reason": extracted["limitation"]})
+        for reason in extracted.get("controlLimitations", []):
+            limitations.append({"path": path, "reason": reason})
         for symbol in extracted["symbols"]:
             qualified = path.removesuffix(".py").replace("/", ".") + "." + symbol["name"]
             sid = identity("symbol", qualified)

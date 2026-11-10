@@ -22,6 +22,7 @@ class Extractor(ast.NodeVisitor):
         self.owner = []
         self.context = []
         self.region_counts = {}
+        self.node_refs = {}
         self.symbols, self.calls, self.branches, self.imports, self.bindings = [], [], [], [], []
 
     def visit_Import(self, node):
@@ -99,6 +100,7 @@ class Extractor(ast.NodeVisitor):
         for keyword in node.keywords:
             if keyword.arg in {"routing_key", "topic", "queue"} and isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
                 channels["channel"] = self.sanitize(keyword.value.value[:200])
+        self.node_refs[id(node)] = "call:" + str(len(self.calls))
         self.calls.append({"owner": ".".join(self.owner) if self.owner else "<module>", "target": target,
                            "line": node.lineno, "end": node.end_lineno, "column": node.col_offset,
                            "arguments": [name(arg.func) if isinstance(arg, ast.Call) else name(arg) for arg in node.args],
@@ -117,6 +119,7 @@ class Extractor(ast.NodeVisitor):
         ordinal = self.region_counts.get(key, 0)
         self.region_counts[key] = ordinal + 1
         region_id = kind + ":" + str(ordinal)
+        self.node_refs[id(node)] = "branch:" + str(len(self.branches))
         self.branches.append({"regionId": region_id, "owner": ".".join(self.owner), "kind": kind, "line": node.lineno,
                               "end": node.end_lineno, "condition": condition, "context": list(self.context)})
         return region_id
@@ -154,7 +157,7 @@ class Extractor(ast.NodeVisitor):
         self.region(node, "loop [else]", node.orelse)
 
     def generic_visit(self, node):
-        if self.owner and isinstance(node, (ast.Raise, ast.Return, ast.Await)):
+        if self.owner and isinstance(node, (ast.Raise, ast.Return, ast.Await, ast.Break, ast.Continue)):
             condition = name(node.exc) if isinstance(node, ast.Raise) and node.exc else ""
             self.boundary(node, type(node).__name__, condition)
         super().generic_visit(node)

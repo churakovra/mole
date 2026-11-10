@@ -29,6 +29,33 @@ class PackageTests(unittest.TestCase):
                 provenance = json.loads(archive.read('mole-source/REVIEW-PROVENANCE.json'))
                 self.assertEqual(provenance['revision'],manifest['revision'])
 
+    def test_working_tree_archive_includes_new_sources_and_renamed_plans(self):
+        import unittest.mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'skills/mole/molekit').mkdir(parents=True)
+            (root / 'skills/mole/molekit/new.py').write_text('# new source\n')
+            (root / 'MOLE-0.1.0-IMPLEMENTATION-PLAN.md').write_text('# 0.1.0\n')
+            (root / 'private.txt').write_text('not source')
+            def fake_git(*args, **kwargs):
+                if args[0] == 'ls-files':
+                    if '--deleted' in args:
+                        return b'skills/mole/removed.py\0'
+                    return b'skills/mole/removed.py\0skills/mole/molekit/new.py\0MOLE-0.1.0-IMPLEMENTATION-PLAN.md\0private.txt\0'
+                if args[0] == 'for-each-ref':
+                    return b'feature/test abc123\n'
+                if args[0] == 'rev-parse':
+                    return b'abc123\n'
+                return b'?? skills/mole/molekit/new.py\n'
+            with unittest.mock.patch('package_source.git', side_effect=fake_git):
+                manifest = package_source(root / 'review.zip', root)
+            with zipfile.ZipFile(root / 'review.zip') as archive:
+                self.assertIn('mole-source/skills/mole/molekit/new.py', archive.namelist())
+                self.assertIn('mole-source/MOLE-0.1.0-IMPLEMENTATION-PLAN.md', archive.namelist())
+                self.assertNotIn('mole-source/private.txt', archive.namelist())
+                self.assertNotIn('mole-source/skills/mole/removed.py', archive.namelist())
+            self.assertTrue(manifest['workingTreeDirty'])
+
     def test_reproducible_archive_and_clean_extracted_install(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

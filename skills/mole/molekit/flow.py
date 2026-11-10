@@ -48,19 +48,23 @@ class Resolver:
                 if symbol["kind"] == "class":
                     self.classes[path].add(symbol["name"])
 
-    def scopes(self, owner):
+    def scopes(self, owner, path):
         parts = owner.split(".") if owner and owner != "<module>" else []
-        return [".".join(parts[:index]) for index in range(len(parts), -1, -1)]
+        return [scope for index in range(len(parts), -1, -1)
+                if (scope := ".".join(parts[:index])) not in self.classes[path] or scope == owner]
 
     def canonical(self, target, path, owner, depth=0, trace=None):
         if depth > 8:
             return "<dynamic>"
         target = target.replace("()", "")
         pieces = target.split(".")
-        scopes = self.scopes(owner)
-        for cls in self.classes[path]:
-            if owner.startswith(cls + "."):
-                scopes.append(cls + ".__init__")
+        scopes = self.scopes(owner, path)
+        # Instance attributes assigned by __init__ may inform explicit receiver
+        # resolution; never make constructor locals an enclosing lexical scope.
+        if pieces[0] in {"self", "cls"}:
+            for cls in self.classes[path]:
+                if owner.startswith(cls + "."):
+                    scopes.append(cls + ".__init__")
         for scope in scopes:
             for length in range(len(pieces), 0, -1):
                 receiver = ".".join(pieces[:length])
@@ -127,8 +131,7 @@ def connect(model, facts, symbols, records, evidence):
     record_map = {record["path"]: record for record in records}
     call_sites, boundaries, unresolved = [], [], []
     occurrences = defaultdict(int)
-    owner_items = defaultdict(list)
-    control_roots = {}
+    fact_operations = {}
     builtins = {"str", "int", "float", "bool", "dict", "set", "list", "tuple", "len", "range", "print", "isinstance", "super", "Exception", "ValueError", "RuntimeError"}
 
     def relation(source, target, kind, evs, condition):
@@ -137,7 +140,7 @@ def connect(model, facts, symbols, records, evidence):
             "evidenceIds": list(dict.fromkeys(evs)), "condition": condition})
 
     for path, entry in facts.items():
-        for call in entry["facts"]["calls"]:
+        for call_index, call in enumerate(entry["facts"]["calls"]):
             owner = resolver.local.get((path, call["owner"]))
             canonical = resolver.canonical(call["target"], path, call["owner"])
             context = [redact(value) for value in call.get("context", [])]
@@ -152,7 +155,7 @@ def connect(model, facts, symbols, records, evidence):
                          "control": context, "sourcePattern": "AST call site"}
             if owner:
                 operation["ownerId"] = owner
-                owner_items[owner].append(operation)
+            fact_operations[(path, "call:" + str(call_index))] = op_id
             model["operations"].append(operation)
             trace = []
             target = resolver.find(call["target"], path, call["owner"], trace=trace)
@@ -169,7 +172,7 @@ def connect(model, facts, symbols, records, evidence):
                                    "operationId": op_id, "kind": kind})
             call_sites.append({**call, "path": path, "operationId": op_id, "ownerOperationId": owner,
                                "canonicalTarget": canonical, "evidenceId": ev, "resolvedTarget": target})
-        for branch in entry["facts"]["branches"]:
+        for branch_index, branch in enumerate(entry["facts"]["branches"]):
             owner = resolver.local.get((path, branch["owner"]))
             if not owner or branch["kind"] == "Await":
                 continue
@@ -184,31 +187,22 @@ def connect(model, facts, symbols, records, evidence):
                   "evidenceIds": [ev], "sourceOrder": branch["line"] * 4096 + (4095 if branch["kind"] in {"Return", "Raise"} else -1),
                   "control": context, "ownerId": owner, "sourcePattern": "AST control region"}
             model["operations"].append(op)
-            owner_items[owner].append(op)
-            control_roots[(owner, branch.get("regionId", ""))] = op_id
+            fact_operations[(path, "branch:" + str(branch_index))] = op_id
             boundaries.append({**branch, "operationId": op_id, "ownerOperationId": owner, "evidenceId": ev, "path": path})
-    # Lexical control regions distinguish alternatives: no unconditional
-    # happy-path edge is invented from try's final statement to its handler.
-    for owner, operations in owner_items.items():
-        regions = defaultdict(list)
-        for op in sorted(operations, key=lambda op: (op["sourceOrder"], op["id"])):
-            regions[tuple(op["control"])].append(op)
-        for context, sequence in regions.items():
-            previous = control_roots.get((owner, context[-1].split(" ", 1)[0]), owner) if context else owner
-            for index, op in enumerate(sequence):
-                kind = "lexical_next_candidate" if index else "branch_candidate" if context else "contains"
-                if context and any(" except " in value for value in context):
-                    kind = "exception_path_candidate" if index == 0 else kind
-                if context and " true:" in context[-1] and index == 0:
-                    kind = "branch_true_candidate"
-                if context and " false:" in context[-1] and index == 0:
-                    kind = "branch_false_candidate"
-                if context and " finally" in context[-1] and index == 0:
-                    kind = "finally_candidate"
-                relation(previous, op["id"], kind, op["evidenceIds"], "; ".join(context) or "Source order only; runtime reachability unverified")
-                previous = op["id"]
-                if op["kind"] in {"control_return", "control_raise"}:
-                    break
+    operation_lookup = {op['id']: op for op in model['operations']}
+    emitted = {edge['id'] for edge in model['relationships']}
+    for path, entry in facts.items():
+        for edge in entry['facts'].get('controlEdges', []):
+            def resolve(ref):
+                return resolver.local.get((path, ref[6:])) if ref.startswith('entry:') else fact_operations.get((path, ref))
+            source, target = resolve(edge['source']), resolve(edge['target'])
+            if not source or not target:
+                continue
+            eid = identity('edge', source + ':' + target + ':' + edge['kind'])
+            if eid in emitted:
+                continue
+            emitted.add(eid)
+            relation(source, target, edge['kind'], operation_lookup[target]['evidenceIds'], edge['condition'])
     return {"symbolOperations": symbol_ops, "callSites": call_sites, "controlBoundaries": boundaries, "unresolved": unresolved}
 
 
@@ -247,17 +241,33 @@ def workflows(scan, max_nodes=400, max_candidates=100):
         seeds = [origin] if kind == "workflow" else sorted(grouped[trigger])
         queue = deque(seeds)
         seen, edge_ids, limits = set(), set(), []
+        deferred = set()
         while queue:
             node = queue.popleft()
             if node in seen:
                 continue
             if len(seen) >= max_nodes:
                 limits.append("workflow_node_budget")
+                deferred = {node, *queue} - seen
+                limitation = {'path': '.', 'reason': 'workflow_node_budget', 'scopeId': identity('workflow', origin if kind == 'workflow' else 'component:' + origin)}
+                if limitation not in scan['limitations']:
+                    scan['limitations'].append(limitation)
                 break
             seen.add(node)
             for edge in graph.get(node, []):
                 edge_ids.add(edge["id"])
                 queue.append(edge["target"])
+        # Enumerate the omitted reachable region without authorizing it in
+        # this task. It remains inspectable as deferred metadata, not claims.
+        if deferred:
+            pending = deque(sorted(deferred))
+            deferred = set()
+            while pending:
+                node = pending.popleft()
+                if node in seen or node in deferred:
+                    continue
+                deferred.add(node)
+                pending.extend(edge['target'] for edge in graph.get(node, []))
         covered.update(seen)
         if not seen:
             continue
@@ -267,7 +277,7 @@ def workflows(scan, max_nodes=400, max_candidates=100):
             "kind": kind, "entryOperationId": origin, "title": operations[origin]["title"] if kind == "workflow" else trigger,
             "trigger": trigger, "operationIds": sorted(seen), "evidenceIds": evs,
             "edgeIds": sorted(edge_ids), "boundaries": unresolved,
-            "limitations": sorted(set(limits)), "critical": kind == "workflow" or any(
+            "limitations": sorted(set(limits)), "deferredOperationIds": sorted(deferred), "critical": kind == "workflow" or any(
                 operations[oid]["kind"] in {"db_write", "publish", "consume", "transaction_boundary"} for oid in seen)})
     remaining = declaration_ids - covered
     if remaining:

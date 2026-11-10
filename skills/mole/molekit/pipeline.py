@@ -119,7 +119,7 @@ def operate(command, workspace, **options):
                 save_state(directory, state, writer=atomic_json)
             task = dict(pending[0]) if pending else None
             if task:
-                for field in ('operationIds', 'evidenceIds'):
+                for field in ('operationIds', 'evidenceIds', 'deferredOperationIds'):
                     if field in task:
                         task[field + 'Count'] = len(task[field])
                         task[field] = task[field][:30]

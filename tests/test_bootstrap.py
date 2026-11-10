@@ -75,6 +75,9 @@ class InstalledSkillTests(unittest.TestCase):
                 self.assertTrue(result.stdout.strip())
                 self.assertEqual(result.stderr, "")
 
+    def test_first_release_version(self):
+        self.assertEqual(self.run_cli("--version").stdout.strip(), "0.1.0")
+
     def test_human_doctor(self):
         result = self.run_cli("doctor")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -84,6 +87,12 @@ class InstalledSkillTests(unittest.TestCase):
         (self.installed / "molekit/errors.py").unlink()
         result = self.run_cli("doctor", "--json")
         self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
+
+    def test_missing_control_flow_module_is_incomplete_payload(self):
+        (self.installed / "molekit/control_flow.py").unlink()
+        result = self.run_cli("doctor", "--json")
+        self.assertEqual(result.returncode, 3)
         self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
 
     def test_installed_scan_offline_without_target_execution(self):

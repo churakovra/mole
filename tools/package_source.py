@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Archive tracked review sources and provenance; never include Git internals."""
+"""Archive review working-tree sources and provenance; never include Git internals."""
 import argparse
 import hashlib
 import json
@@ -9,8 +9,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIXES = {'.github', 'skills', 'tests', 'tools', 'docs'}
-TOP_FILES = {'.gitignore', 'LICENSE', 'README.md', 'CONTRIBUTING.md', 'DEVELOPMENT-STATUS.md',
-             'MOLE-1.0.0-DEVELOPMENT-GUIDE.md', 'MOLE-1.0.0-IMPLEMENTATION-PLAN.md', 'MOLE-1.0.0-PR-BACKLOG.md'}
+TOP_FILES = {'.gitignore', 'LICENSE', 'README.md', 'CONTRIBUTING.md', 'DEVELOPMENT-STATUS.md', 'CHANGELOG.md', 'SECURITY.md',
+             'MOLE-0.1.0-DEVELOPMENT-GUIDE.md', 'MOLE-0.1.0-IMPLEMENTATION-PLAN.md', 'MOLE-0.1.0-PR-BACKLOG.md'}
 
 
 def git(*args, root=ROOT):
@@ -19,7 +19,9 @@ def git(*args, root=ROOT):
 
 def package_source(output, root=ROOT):
     root, output = Path(root).resolve(), Path(output)
-    paths = git('ls-files', '-z', root=root).decode().split('\0')
+    paths = set(git('ls-files', '--cached', '--others', '--exclude-standard', '-z', root=root).decode().split('\0'))
+    deleted = set(git('ls-files', '--deleted', '-z', root=root).decode().split('\0'))
+    paths -= deleted
     files = []
     for name in sorted(filter(None, paths)):
         relative = Path(name)
@@ -37,9 +39,9 @@ def package_source(output, root=ROOT):
         files.append((name, path.read_bytes()))
     refs = git('for-each-ref', '--format=%(refname:short) %(objectname)', 'refs/heads', root=root).decode().splitlines()
     provenance = {'revision':git('rev-parse','HEAD',root=root).decode().strip(),
-                  'workingTreeDirty':bool(git('status','--porcelain','--untracked-files=no',root=root).strip()),
+                  'workingTreeDirty':bool(git('status','--porcelain','--untracked-files=normal',root=root).strip()),
                   'localBranchHeads':dict(line.split(' ',1) for line in refs),
-                  'contents':'Combined tracked source snapshot; branches are stacked, not merged. Git history is not included.'}
+                  'contents':'Combined working-tree source snapshot; branches are stacked, not merged. Git history is not included.'}
     files.append(('REVIEW-PROVENANCE.json',(json.dumps(provenance,sort_keys=True,indent=2)+'\n').encode()))
     output.parent.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as archive:

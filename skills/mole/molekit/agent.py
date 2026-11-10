@@ -19,6 +19,7 @@ def create_tasks(scan, mode):
         task = {"id": identity("task", workflow["id"]), "kind": "workflow_review" if workflow["kind"] == "workflow" else "component_review",
                 "priority": "critical" if workflow["critical"] else "normal",
                 "question": "Reconstruct the bounded workflow, purpose, ordered paths, exceptions and evidence limits: " + workflow["title"],
+                "limitations": workflow["limitations"], "deferredOperationIds": workflow["deferredOperationIds"],
                 "scopeKind": workflow["kind"], "scopeId": workflow["id"], "operationIds": workflow["operationIds"],
                 "evidenceIds": workflow["evidenceIds"], "baseRevision": model["revision"], "status": "pending",
                 "responseSchema": "semantic-patch.v1"}
@@ -73,6 +74,27 @@ def related_scenarios(state, task):
 def inspect(state, task, budget, cursor):
     if budget < 1024 or budget > 32000:
         raise MoleError("INVALID_BUDGET", "Inspection budget must be 1024..32000 characters.")
+    if cursor.startswith('deferred:'):
+        try:
+            offset = int(cursor[9:])
+        except ValueError as exc:
+            raise MoleError('INVALID_CURSOR', 'Deferred cursor must be deferred:N.') from exc
+        ids = task.get('deferredOperationIds', [])
+        if offset < 0 or offset > len(ids):
+            raise MoleError('INVALID_CURSOR', 'Deferred cursor is outside task scope.')
+        result = {'taskId': task['id'], 'baseRevision': state['revision'],
+                  'deferredOperationIds': [], 'limitations': task.get('limitations', []),
+                  'nextCursor': None}
+        for index in range(offset, len(ids)):
+            candidate = {**result, 'deferredOperationIds': result['deferredOperationIds'] + [ids[index]],
+                         'nextCursor': 'deferred:' + str(index + 1)}
+            if len(json.dumps(candidate, ensure_ascii=True)) > budget - 768:
+                if not result['deferredOperationIds']:
+                    raise MoleError('INVALID_BUDGET', 'Increase budget for deferred scope metadata.')
+                result['nextCursor'] = 'deferred:' + str(index)
+                break
+            result['deferredOperationIds'].append(ids[index])
+        return result
     if cursor.startswith('scenes:'):
         try:
             offset = int(cursor[7:])

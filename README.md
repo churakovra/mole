@@ -6,7 +6,7 @@ MOLE is a self-contained Agent Skill (`$mole`) with a bundled Python engine,
 `molekit`. It inventories source, asks the agent bounded evidence-backed questions,
 and compiles a shared knowledge model into Markdown, offline HTML and draw.io.
 
-**Current version: 1.0.0rc2, an unreleased review candidate.** Implementation is
+**Current version: 0.1.0, an unreleased review candidate.** Implementation is
 available locally; [release acceptance gaps](docs/release-readiness.md) remain.
 Static candidates are not verified runtime behavior.
 

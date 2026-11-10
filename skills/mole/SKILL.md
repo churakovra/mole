@@ -4,7 +4,7 @@ description: Investigate Python codebases through source-backed local tasks, exp
 license: Apache-2.0 (see LICENSE)
 compatibility: Requires a shell and Python 3.11+; bundled engine runs offline without third-party Python packages.
 metadata:
-  version: "1.0.0rc2"
+  version: "0.1.0"
 ---
 
 # MOLE

@@ -134,7 +134,7 @@ def main(argv=None):
     required += ["molekit/" + name + ".py" for name in
                  ("__init__", "cli", "errors", "workspace", "pipeline", "model", "scanner",
                   "adapters", "agent", "knowledge", "markdown", "html", "layout", "drawio", "mermaid", "update", "safety",
-                  "python_ast", "flow", "snapshots", "output", "quality")]
+                  "python_ast", "control_flow", "flow", "snapshots", "output", "quality")]
     required += ["references/" + name + ".md" for name in ("agent-protocol", "evidence-policy", "confluence-export")]
     if not all((payload / name).is_file() for name in required):
         failure("PAYLOAD_INCOMPLETE", "Installed skill payload is incomplete.", "Copy the entire skills/mole directory.")

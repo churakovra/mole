@@ -111,3 +111,22 @@ formats disappear from the new generation and remain in the previous one, listed
 by its retirement manifest. Legacy root files are retained during migration.
 Unpublished `.stage-*` directories are not active bundles and may be removed
 manually after preserving any edits. JSON quality/loss sidecars describe limits.
+
+
+## Bounded control flow and deferred scopes (0.1.0)
+
+Parser v7 reconstructs argument evaluation, branch joins, loop back/exit paths,
+and break/continue/return/raise boundaries from source AST. These are static
+candidates. Context managers, comprehensions, lazy expressions, complex finally
+completion and other unsupported regions produce explicit coverage limitations;
+they do not establish runtime behavior. A parser-version update reopens semantic
+review rather than silently retaining the previous graph.
+
+Workflow tasks include `limitations` and `deferredOperationIds`. The latter lists
+reachable operations omitted by the workflow node budget. They are metadata,
+not additional authorized operations: claims and scenario additions must stay in
+`operationIds`. `next` returns bounded previews and counts; use
+`inspect --cursor deferred:0` and subsequent `nextCursor` values to page the full
+omitted list. Narrow the requested repository scope for a complete smaller run.
+Node-budget truncation remains a quality limitation even if every selected task
+has been answered.

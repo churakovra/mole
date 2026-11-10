@@ -95,7 +95,10 @@ class ReviewFlowTests(unittest.TestCase):
             self.assertTrue(any("except ValueError" in context for context in rollback["control"]))
             incoming = [edge for edge in model["relationships"] if edge["target"] == rollback["id"]]
             self.assertTrue(incoming)
-            self.assertFalse(any(operations[edge["source"]]["title"].endswith("Session.commit") for edge in incoming))
+            self.assertFalse(any(operations[edge["source"]]["title"].endswith("Session.commit")
+                                 and edge["kind"] != "exception_path_candidate" for edge in incoming))
+            self.assertTrue(all("unverified" in edge["condition"] for edge in incoming
+                                if operations[edge["source"]]["title"].endswith("Session.commit")))
 
     def test_imported_library_does_not_turn_set_add_into_db_write(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as repo:
