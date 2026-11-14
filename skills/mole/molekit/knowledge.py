@@ -10,7 +10,11 @@ MAX_VIEWS = 256
 MAX_DETAIL_NODES = 80
 
 
-def compose(scan):
+def compose(scan, view_budget=None):
+    if scan.get('processGraph') is not None:
+        from molekit.process_graph import project
+        return project(scan)
+    max_views = MAX_VIEWS if view_budget is None else min(MAX_VIEWS, view_budget)
     model = scan['model']
     model['operations'] = [op for op in model['operations'] if op['kind'] not in {'scenario_summary', 'component_summary'}]
     model['relationships'] = [edge for edge in model['relationships'] if not edge['id'].startswith('view-edge-')]
@@ -21,8 +25,13 @@ def compose(scan):
     sources = {source['id']: source for source in model['sources']}
     graph = adjacency(model)
     edge_lookup = {edge['id']: edge for edge in model['relationships']}
+    claim_lookup = {claim['id']: claim for claim in model['claims']}
     candidates = scan.get('workflows') or workflows(scan)
     authored = scan.get('semantic', {})
+    # Technical detail must not consume the budget before authored processes.
+    reserved_views = {identity('view', scene['id']) for scene in authored.get('scenarios', [])}
+    if authored.get('scenarios'):
+        reserved_views.add('view-technical-catalog')
     model['businessSteps'] = list(authored.get('businessSteps', []))
     model['glossary'] = list(authored.get('glossary', []))
     views, function_views = {}, {}
@@ -60,7 +69,8 @@ def compose(scan):
     def add_view(vid, title, nodes, edge_ids=(), children=(), scenario_ids=()):
         if vid in views:
             return views[vid]
-        if len(views) >= MAX_VIEWS:
+        if len(views) >= max_views or (vid not in reserved_views and
+                len(views) >= max_views - len(reserved_views - views.keys())):
             limited.add('diagram_view_budget_exceeded')
             return None
         node_set = {node['id'] for node in nodes}
@@ -72,7 +82,7 @@ def compose(scan):
         views[vid] = view
         return view
 
-    def summary(kind, key, title, ids):
+    def summary(kind, key, title, ids, claim_ids=()):
         oid = identity(kind, key)
         if oid not in operations:
             evs = sorted({ev for item in ids for ev in operations[item]['evidenceIds']})
@@ -80,7 +90,22 @@ def compose(scan):
                   'title': title, 'evidenceIds': evs}
             operations[oid] = op
             model['operations'].append(op)
+            if claim_ids:
+                op['claimIds'] = list(claim_ids)
         return oid
+
+    def authored_edge(key, source, target, kind, link):
+        edge = {'id': identity('view-edge', key), 'source': source, 'target': target,
+                'kind': kind, 'resolution': 'possible', 'claimIds': list(link['claimIds']),
+                'evidenceIds': sorted({ev for cid in link['claimIds'] for ev in claim_lookup[cid]['evidenceIds']}),
+                'condition': link['label'] + (': ' + link['condition'] if link['condition'] else '')}
+        model['relationships'].append(edge)
+        edge_lookup[edge['id']] = edge
+        return edge['id']
+
+    def supported_link(link):
+        return bool(link['claimIds']) and all(claim_lookup[cid]['evidenceIds'] and
+            claim_lookup[cid]['status'] not in {'unknown', 'contradicted'} for cid in link['claimIds'])
 
     active = {oid for candidate in candidates for oid in candidate['operationIds']}
     for scenario in authored.get('scenarios', []):
@@ -88,7 +113,7 @@ def compose(scan):
     # A callable view is shared wherever that callable is reused. Cross-call
     # links retain actual containment routes rather than an arbitrary click history.
     for oid in order(active & declared_ops):
-        if len(function_views) + 32 >= MAX_VIEWS:
+        if len(function_views) + 32 >= max_views:
             limited.add('diagram_view_budget_exceeded')
             break
         function_views[oid] = identity('view', 'callable:' + oid)
@@ -135,6 +160,8 @@ def compose(scan):
                 [item['kind'] + ': ' + item['target'] for item in candidate['boundaries']],
             'entryOperationId': candidate['entryOperationId']})
     overview = {'id': 'view-overview', 'title': 'System workflows', 'scenarioIds': [], 'nodes': [], 'edgeIds': [], 'childRefs': []}
+    catalog = {'id': 'view-technical-catalog', 'title': 'Additional static scopes',
+               'scenarioIds': [], 'nodes': [], 'edgeIds': [], 'childRefs': []}
     for scene in scenes:
         ids = set(scene['operationIds'])
         origin = scene.get('entryOperationId', scene['operationIds'][0])
@@ -159,7 +186,7 @@ def compose(scan):
             for condition, values in alternatives.items()])
         if not scene['outcomes']:
             scene['outcomes'] = ['Static return/raise boundaries are documented; business outcome is not established.']
-        root_id = summary('scenario-summary', scene['id'], scene['title'], ids)
+        root_id = summary('scenario-summary', scene['id'], scene['title'], ids, scene['claimIds'])
         scene['operationIds'] = [root_id, *ordered]
         model['scenarios'].append(scene)
         vid = identity('view', scene['id'])
@@ -207,10 +234,76 @@ def compose(scan):
             edge['evidenceIds'] = sorted(set(edge['evidenceIds']))
             model['relationships'].append(edge)
             edge_lookup[edge['id']] = edge
-        add_view(vid, scene['title'], module_nodes, [edge['id'] for edge in module_edges.values()], module_children, [scene['id']])
-        overview['scenarioIds'].append(scene['id'])
-        overview['nodes'].append({'id': root_id, 'label': scene['title'], 'childViewId': vid})
-        overview['childRefs'].append(vid)
+        # Authored meaning is the first drilldown. Files and callables are
+        # implementation details, not a substitute for the process steps.
+        authored_steps = scene.get('steps', []) if scene['kind'] == 'authored_workflow' else []
+        technical_vid = identity('view', 'technical:' + scene['id']) if authored_steps else vid
+        technical = add_view(technical_vid, scene['title'] + ' · implementation' if authored_steps else scene['title'],
+                             module_nodes, [edge['id'] for edge in module_edges.values()], module_children, [scene['id']])
+        if authored_steps:
+            business_nodes, business_edges, business_children = [], [], []
+
+            def business_node(key, label, operation_ids, claim_ids=(), condition=''):
+                node_id = summary('component-summary', scene['id'] + ':business:' + key, label, operation_ids, claim_ids)
+                if condition:
+                    operations[node_id]['condition'] = condition
+                # A step opens the callable containing its anchor, or its
+                # module diagram for text/external operations. Never guess a call.
+                anchor = operation_ids[0]
+                child = function_views.get(anchor) or function_views.get(operations[anchor].get('ownerId'))
+                if child not in views:
+                    child = next((node.get('childViewId') for node in module_nodes
+                                  if node['id'] == membership.get(anchor)), None)
+                node = {'id': node_id, 'label': label}
+                if child in views:
+                    node['childViewId'] = child
+                    business_children.append(child)
+                business_nodes.append(node)
+                return node_id
+
+            step_nodes = []
+            for index, step in enumerate(authored_steps):
+                label = step['description']
+                node_id = business_node(str(index), label, [step['operationId']], step['claimIds'], step.get('condition', ''))
+                step_nodes.append(node_id)
+            for index, link in enumerate(scene.get('stepTransitions', [])):
+                if supported_link(link):
+                    business_edges.append(authored_edge(vid + ':transition:' + str(index),
+                        step_nodes[link['fromStep']], step_nodes[link['toStep']], 'business_transition', link))
+            # Keep authored failure paths visible even when the author supplied
+            # them separately from the main steps. No transition is invented:
+            # a failure condition does not establish a specific source step.
+            represented = {step['operationId'] for step in authored_steps}
+            for branch_index, branch in enumerate(scene.get('failurePaths', [])):
+                for operation_id in branch['operationIds']:
+                    if operation_id not in represented:
+                        business_node('failure:' + str(branch_index) + ':' + operation_id,
+                                      operations[operation_id]['title'], [operation_id],
+                                      branch['claimIds'], branch['condition'])
+                        represented.add(operation_id)
+            # Keep the complete static implementation reachable, including
+            # operations omitted from the deliberately smaller business view.
+            if technical:
+                node_id = summary('component-summary', scene['id'] + ':implementation', 'Implementation details', ids)
+                business_nodes.append({'id': node_id, 'label': 'Implementation details', 'childViewId': technical_vid})
+                business_children.append(technical_vid)
+            add_view(vid, scene['title'], business_nodes, business_edges, business_children, [scene['id']])
+        destination = catalog if authored.get('scenarios') and scene['kind'] != 'authored_workflow' else overview
+        destination['scenarioIds'].append(scene['id'])
+        destination['nodes'].append({'id': root_id, 'label': scene['title'], 'childViewId': vid})
+        destination['childRefs'].append(vid)
+    roots = {scene['id']: scene['operationIds'][0] for scene in model['scenarios']}
+    for scene in authored.get('scenarios', []):
+        for index, link in enumerate(scene.get('links', [])):
+            if supported_link(link):
+                overview['edgeIds'].append(authored_edge('overview:' + scene['id'] + ':' + str(index),
+                    roots[scene['id']], roots[link['targetScenarioId']], 'business_handoff', link))
+    if catalog['nodes']:
+        add_view(catalog['id'], catalog['title'], catalog['nodes'], children=catalog['childRefs'], scenario_ids=catalog['scenarioIds'])
+        catalog_id = summary('component-summary', 'technical-catalog', catalog['title'],
+                             [node['id'] for node in catalog['nodes']])
+        overview['nodes'].append({'id': catalog_id, 'label': catalog['title'], 'childViewId': catalog['id']})
+        overview['childRefs'].append(catalog['id'])
     # Referenced views that could not be allocated become explicit leaves.
     for view in views.values():
         view['childRefs'] = [child for child in view['childRefs'] if child in views]

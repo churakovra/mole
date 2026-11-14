@@ -10,6 +10,7 @@ const chrome = spawn(browser, ["--headless", "--no-first-run", "--disable-backgr
   "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1",
   "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1", "--user-data-dir=" + path.join(directory, "profile"), "about:blank"], {stdio:"ignore"});
 let socket;
+let closeBrowser;
 async function run() {
   const portFile = path.join(directory, "profile", "DevToolsActivePort");
   for(let i=0;i<200 && !fs.existsSync(portFile);i++) {
@@ -33,6 +34,7 @@ async function run() {
   const call = (method,params={}) => new Promise((resolve,reject)=>{
     const id=++sequence;pending.set(id,[resolve,reject]);socket.send(JSON.stringify({id,method,params}));
   });
+  closeBrowser = () => call('Browser.close');
   await call("Page.enable");
   await call("Emulation.setDeviceMetricsOverride", {width:Number(width),height:844,deviceScaleFactor:1,mobile:false});
   await call('Emulation.setTouchEmulationEnabled', {enabled:true,maxTouchPoints:5});
@@ -63,6 +65,16 @@ async function run() {
   }
   process.stdout.write(html);
 }
-run().catch(error=>{process.stderr.write(String(error));process.exitCode=1;}).finally(()=>{
-  if(socket) socket.close();chrome.kill();
+run().catch(error=>{process.stderr.write(String(error));process.exitCode=1;}).finally(async()=>{
+  // Browser.close coordinates renderer/profile shutdown. SIGTERM of only the
+  // browser parent can leave children still writing after the parent exits.
+  if(chrome.exitCode === null) {
+    const closed = new Promise(resolve => chrome.once('close',resolve));
+    const timer = setTimeout(() => chrome.kill('SIGKILL'), 3000);
+    if(closeBrowser) closeBrowser().catch(()=>{});
+    else chrome.kill();
+    await closed;
+    clearTimeout(timer);
+  }
+  if(socket) socket.close();
 });

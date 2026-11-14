@@ -1,0 +1,606 @@
+{
+  "version": 1,
+  "purpose": "Predeclared fresh-agent evaluation inputs; not model behavior test results.",
+  "cases": [
+    {
+      "id": "P01",
+      "fixture": "auth-service",
+      "prompt": "$mole Where is JWT checked?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P02",
+      "fixture": "auth-service",
+      "prompt": "$mole Где проверяется JWT?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P03",
+      "fixture": "auth-service",
+      "prompt": "$mole Explain verify_jwt.",
+      "intent": "explain",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P04",
+      "fixture": "auth-service",
+      "prompt": "$mole Trace GET /profile.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P05",
+      "fixture": "auth-service",
+      "prompt": "$mole Does this code prove tokens are cryptographically validated?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P06",
+      "fixture": "auth-service",
+      "prompt": "$mole Explain how this service works.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P07",
+      "fixture": "auth-service",
+      "prompt": "$mole Just explain this service in text.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P08",
+      "fixture": "auth-service",
+      "prompt": "$mole Find POST /unknown.",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P09",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Trace POST /orders to publishing.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P10",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole What if order persistence fails?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P11",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Explain to me how this service works.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P12",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Document the order pipeline in Markdown and HTML.",
+      "intent": "document",
+      "requiredDeliverable": "explicit_artifacts",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P13",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Where does Store.save commit?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P14",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole What happens after order publication?",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P15",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Explain worker.handle_order.",
+      "intent": "explain",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P16",
+      "fixture": "cross-file-workflow",
+      "prompt": "$mole Explain the service without creating any files.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P17",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Where are background tasks scheduled?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P18",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Trace database write to event publication.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P19",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Is database commit atomic with publication?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P20",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Explain the transaction boundaries.",
+      "intent": "explain",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P21",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Show the main business processes.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P22",
+      "fixture": "fastapi-db-events",
+      "prompt": "$mole Create a Markdown description only.",
+      "intent": "document",
+      "requiredDeliverable": "explicit_artifacts",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P23",
+      "fixture": "django-transactions",
+      "prompt": "$mole Where is transaction.atomic used?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P24",
+      "fixture": "django-transactions",
+      "prompt": "$mole Trace the view to its database effect.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P25",
+      "fixture": "django-transactions",
+      "prompt": "$mole What rollback behavior can static evidence establish?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P26",
+      "fixture": "django-transactions",
+      "prompt": "$mole Explain this Django service.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P27",
+      "fixture": "django-transactions",
+      "prompt": "$mole Explain the model responsibilities.",
+      "intent": "explain",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P28",
+      "fixture": "consumer-retry-idempotency",
+      "prompt": "$mole Why might notifications be duplicated?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P29",
+      "fixture": "consumer-retry-idempotency",
+      "prompt": "$mole Trace consume to acknowledge or reject.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P30",
+      "fixture": "consumer-retry-idempotency",
+      "prompt": "$mole Where is retry-related waiting?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P31",
+      "fixture": "consumer-retry-idempotency",
+      "prompt": "$mole Does this guarantee exactly-once delivery?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P32",
+      "fixture": "consumer-retry-idempotency",
+      "prompt": "$mole Explain how this consumer works.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P33",
+      "fixture": "game-settlement",
+      "prompt": "$mole Explain how this service works.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "interactive_process_map",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P34",
+      "fixture": "game-settlement",
+      "prompt": "$mole Trace POST /games/complete to wallet credit.",
+      "intent": "trace",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P35",
+      "fixture": "game-settlement",
+      "prompt": "$mole What happens if wallet credit fails?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P36",
+      "fixture": "game-settlement",
+      "prompt": "$mole Where is reward eligibility checked?",
+      "intent": "locate",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P37",
+      "fixture": "game-settlement",
+      "prompt": "$mole Does receiving a reward require a cosmetic purchase?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P38",
+      "fixture": "game-settlement",
+      "prompt": "$mole Is the TypeScript verifier runtime-verified?",
+      "intent": "investigate",
+      "requiredDeliverable": "investigation_report",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P39",
+      "fixture": "game-settlement",
+      "prompt": "$mole Document settlement with eligibility and failure branches.",
+      "intent": "document",
+      "requiredDeliverable": "explicit_artifacts",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    },
+    {
+      "id": "P40",
+      "fixture": "game-settlement",
+      "prompt": "$mole Explain the game service using text only.",
+      "intent": "system_orientation",
+      "requiredDeliverable": "chat_answer",
+      "status": "NOT_RUN",
+      "negativeAssertions": [
+        "Do not execute or mutate target code.",
+        "Do not upgrade static evidence to runtime guarantees."
+      ],
+      "allowedUnknowns": [
+        "Runtime behavior and unsupported-language implementation."
+      ]
+    }
+  ]
+}

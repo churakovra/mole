@@ -23,7 +23,8 @@ def validate_schema(value, schema, location="$", depth=0):
     """Validate the deliberately small JSON Schema vocabulary in bundled schemas.
 
     This is not a general-purpose JSON Schema implementation. All bundled
-    contracts use only type/enum/required/properties/items/additionalProperties.
+    contracts use types, enums, object fields, bounded strings/arrays/numbers,
+    uniqueness and patterns. This is deliberately not a general implementation.
     """
     if depth > 64:
         raise MoleError("SCHEMA_MISMATCH", "JSON nesting exceeds 64 levels.")
@@ -36,6 +37,18 @@ def validate_schema(value, schema, location="$", depth=0):
         raise MoleError("SCHEMA_MISMATCH", location + ": invalid type")
     if "enum" in schema and value not in schema["enum"]:
         raise MoleError("SCHEMA_MISMATCH", location + ": invalid enum")
+    if isinstance(value, str):
+        if (len(value) < schema.get('minLength', 0) or len(value) > schema.get('maxLength', len(value))
+                or ('pattern' in schema and re.search(schema['pattern'], value) is None)):
+            raise MoleError('SCHEMA_MISMATCH', location + ': invalid string bounds or pattern')
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if value < schema.get('minimum', value) or value > schema.get('maximum', value):
+            raise MoleError('SCHEMA_MISMATCH', location + ': numeric bound exceeded')
+    if isinstance(value, list):
+        if len(value) < schema.get('minItems', 0) or len(value) > schema.get('maxItems', len(value)):
+            raise MoleError('SCHEMA_MISMATCH', location + ': array bound exceeded')
+        if schema.get('uniqueItems') and len({json.dumps(item, sort_keys=True) for item in value}) != len(value):
+            raise MoleError('SCHEMA_MISMATCH', location + ': repeated array item')
     if isinstance(value, dict):
         for key in schema.get("required", []):
             if key not in value:
@@ -99,6 +112,7 @@ def validate_model(model):
             raise MoleError("INSUFFICIENT_EVIDENCE", "Symbol requires a source.")
     for operation in model["operations"]:
         refs(operation["evidenceIds"], "evidence")
+        refs(operation.get('claimIds', []), 'claims')
         if not operation["evidenceIds"]:
             raise MoleError("INSUFFICIENT_EVIDENCE", "Operation requires evidence.")
     endpoints = groups["symbols"] | groups["operations"]
@@ -107,6 +121,7 @@ def validate_model(model):
                for k in ("source", "target")):
             raise MoleError("DANGLING_REFERENCE", "Invalid relationship endpoint.")
         refs(relation["evidenceIds"], "evidence")
+        refs(relation.get('claimIds', []), 'claims')
         if not relation["evidenceIds"]:
             raise MoleError("INSUFFICIENT_EVIDENCE", "Relationship requires evidence.")
         if relation["resolution"] == "observed_runtime" and not any(
@@ -116,6 +131,16 @@ def validate_model(model):
         refs(scenario["operationIds"], "operations")
         refs(scenario["claimIds"], "claims")
         allowed = set(scenario["operationIds"])
+        for link in scenario.get('links', []):
+            refs([link['targetScenarioId']], 'scenarios')
+        for transition in scenario.get('stepTransitions', []):
+            if any(index < 0 or index >= len(scenario.get('steps', []))
+                   for index in (transition['fromStep'], transition['toStep'])):
+                raise MoleError('DANGLING_REFERENCE', 'Transition step index is outside its scenario.')
+        for link in [*scenario.get('links', []), *scenario.get('stepTransitions', [])]:
+            refs(link['claimIds'], 'claims')
+            if not link['label'].strip() or not link['claimIds'] or not set(link['claimIds']) <= set(scenario['claimIds']):
+                raise MoleError('INSUFFICIENT_EVIDENCE', 'A process transition needs a label and scenario-linked claims.')
         for step in scenario.get("steps", []):
             if step["operationId"] not in allowed:
                 raise MoleError("DANGLING_REFERENCE", "Step operation is outside its scenario.")

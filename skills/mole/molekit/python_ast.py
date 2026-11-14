@@ -23,6 +23,8 @@ class Extractor(ast.NodeVisitor):
         self.context = []
         self.region_counts = {}
         self.node_refs = {}
+        self.declaration = False
+        self.declaration_for = None
         self.symbols, self.calls, self.branches, self.imports, self.bindings = [], [], [], [], []
 
     def visit_Import(self, node):
@@ -41,14 +43,40 @@ class Extractor(ast.NodeVisitor):
         self.bindings.append({"owner": ".".join(self.owner), "name": target, "type": value,
                               "line": node.lineno})
 
+    def literal(self, node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return self.sanitize(node.value[:500])
+        return None
+
     def symbol(self, node, kind):
         decorators = [name(d.func if isinstance(d, ast.Call) else d) for d in node.decorator_list]
         # Decorators/default expressions execute in the enclosing declaration
         # context, not inside each invocation of the decorated callable.
+        declaration, self.declaration = self.declaration, True
+        previous_declaration_for = self.declaration_for
+        self.declaration_for = '.'.join([*self.owner, node.name])
+        decorator_calls = []
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call):
+                keywords = {kw.arg: kw.value for kw in decorator.keywords}
+                path = self.literal(decorator.args[0]) if decorator.args else self.literal(keywords.get('path'))
+                methods_node = keywords.get('methods')
+                methods = [self.literal(item) for item in methods_node.elts] if isinstance(methods_node, (ast.List, ast.Tuple)) else []
+                decorator_calls.append({'target': name(decorator.func), 'path': path,
+                                        'methods': methods, 'methodsSpecified': 'methods' in keywords,
+                                        'line': decorator.lineno})
+            self.visit(decorator)
+        if hasattr(node, 'args'):
+            for default in [*node.args.defaults, *node.args.kw_defaults]:
+                if default is not None:
+                    self.visit(default)
+        self.declaration = declaration
+        self.declaration_for = previous_declaration_for
         self.owner.append(node.name)
         local = ".".join(self.owner)
         self.symbols.append({"name": local, "kind": kind, "line": node.lineno,
                              "end": node.end_lineno, "decorators": decorators,
+                             "decoratorCalls": decorator_calls,
                              "decoratorLine": min([node.lineno, *[d.lineno for d in node.decorator_list]]),
                              "bases": [name(base) for base in getattr(node, "bases", [])]})
         if hasattr(node, "args"):
@@ -74,10 +102,18 @@ class Extractor(ast.NodeVisitor):
         value = node.value.value if isinstance(node.value, ast.Await) else node.value
         for target in node.targets:
             self.bind(name(target), name(value.func) if isinstance(value, ast.Call) else name(value), node)
+            if isinstance(value, ast.Call):
+                for keyword in value.keywords:
+                    if keyword.arg == 'prefix':
+                        self.bindings[-1]['routePrefix'] = self.literal(keyword.value)
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node):
         self.bind(name(node.target), name(node.annotation), node)
+        if isinstance(node.value, ast.Call):
+            for keyword in node.value.keywords:
+                if keyword.arg == 'prefix':
+                    self.bindings[-1]['routePrefix'] = self.literal(keyword.value)
         self.generic_visit(node)
 
     def visit_With(self, node):
@@ -105,6 +141,9 @@ class Extractor(ast.NodeVisitor):
                            "line": node.lineno, "end": node.end_lineno, "column": node.col_offset,
                            "arguments": [name(arg.func) if isinstance(arg, ast.Call) else name(arg) for arg in node.args],
                            "channels": channels, "context": list(self.context)})
+        if self.declaration:
+            self.calls[-1]['declaration'] = True
+            self.calls[-1]['declarationFor'] = self.declaration_for
         self.generic_visit(node)
 
     def region(self, node, label, statements):

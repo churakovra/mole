@@ -86,8 +86,11 @@ def documents(model, repo, output, partial=False):
         for ev_id in sorted(refs):
             ev = evidence[ev_id]
             source = sources[ev["sourceId"]]
-            relative = os.path.relpath(Path(repo) / source["path"], Path(output) / "processes").replace(os.sep, "/")
-            lines.append("- `" + ev_id + "`: [" + text(source["path"]) + "](" + quote(relative, safe="/.") + ")"
+            from molekit.safety import relative_source_path
+            relative = relative_source_path(Path(repo) / source["path"], Path(output) / "processes")
+            locator = ("[" + text(source["path"]) + "](" + quote(relative, safe="/.") + ")"
+                       if relative is not None else text(source["path"]))
+            lines.append("- `" + ev_id + "`: " + locator
                          + " lines " + str(source["lineStart"]) + "–" + str(source["lineEnd"])
                          + "; " + text(ev["classification"]) + "; " + text(ev["observation"]))
         lines.extend(["", "[All processes](../README.md)", ""])
@@ -190,18 +193,24 @@ def plan_writes(output, generated, previous):
             continue
         if path.exists():
             current = path.read_bytes().decode("utf-8")
-            begin = current.find(start)
+            # Match either generated marker newline without normalizing the
+            # surrounding author-owned bytes. Only comparison of body hashes
+            # treats CRLF as LF; real edits must still conflict.
+            actual_start = start.replace('\n', '\r\n') if start.replace('\n', '\r\n') in current else start
+            begin = current.find(actual_start)
             finish = current.find(end)
-            if begin < 0 or finish < begin or current.count(start) != 1 or current.count(end) != 1:
+            if begin < 0 or finish < begin or current.count(actual_start) != 1 or current.count(end) != 1:
                 conflicts.append(relative)
                 continue
-            old_body = current[begin + len(start):finish]
+            old_body = current[begin + len(actual_start):finish]
             accepted = previous.get(relative, [])
             accepted = accepted if isinstance(accepted, list) else [accepted]
-            if hashlib.sha256(old_body.encode()).hexdigest() not in accepted:
+            hashes = {hashlib.sha256(value.encode()).hexdigest() for value in
+                      (old_body, old_body.replace('\r\n', '\n'))}
+            if not hashes.intersection(accepted):
                 conflicts.append(relative)
                 continue
-            pending[path] = current[:begin + len(start)] + body + current[finish:]
+            pending[path] = current[:begin + len(actual_start)] + body + current[finish:]
         else:
             manual = "\n\n%% mole:manual:start\n%% mole:manual:end\n" if mermaid else "\n\n<!-- mole:manual:start -->\n<!-- mole:manual:end -->\n"
             pending[path] = start + body + end + manual

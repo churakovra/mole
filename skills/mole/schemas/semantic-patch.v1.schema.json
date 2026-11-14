@@ -184,6 +184,70 @@
               ],
               "additionalProperties": false
             }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "targetScenarioId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "targetScenarioId",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "stepTransitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fromStep": {
+                  "type": "integer"
+                },
+                "toStep": {
+                  "type": "integer"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "fromStep",
+                "toStep",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
@@ -414,6 +478,70 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "addLinks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "targetScenarioId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "targetScenarioId",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "addStepTransitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fromStep": {
+                  "type": "integer"
+                },
+                "toStep": {
+                  "type": "integer"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "fromStep",
+                "toStep",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
             }
           }
         },

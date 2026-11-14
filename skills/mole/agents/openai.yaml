@@ -1,4 +1,4 @@
 interface:
   display_name: "MOLE"
-  short_description: "Trace Python workflows with source-backed evidence"
-  default_prompt: "Use $mole to investigate this repository and explain its workflows with evidence and limitations."
+  short_description: "Answer code questions and map service processes with evidence"
+  default_prompt: "Use $mole to investigate my repository question with source evidence, choosing a concise answer or an interactive process map according to my goal."

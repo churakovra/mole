@@ -46,19 +46,40 @@ def enrich(result):
                         if i['module'].split('.')[0] in {'fastapi', 'starlette', 'django', 'sqlalchemy', 'aio_pika', 'aiokafka', 'asyncio'})
         for symbol in entry['facts']['symbols']:
             owner = resolver.local[(path, symbol['name'])]
-            for decorator in symbol['decorators']:
-                canonical = resolver.canonical(decorator, path, '')
+            for decorator in symbol.get('decoratorCalls', []):
+                canonical = resolver.canonical(decorator['target'], path, '')
                 root, _, method = canonical.rpartition('.')
-                if root in {'fastapi.FastAPI', 'fastapi.APIRouter', 'starlette.routing.Router', 'starlette.applications.Starlette'} and method in {'get', 'post', 'put', 'patch', 'delete', 'route', 'websocket'}:
-                    oid = identity('entry', owner + canonical)
-                    op = {'id': oid, 'kind': 'http_entry', 'title': 'HTTP route: ' + model_title(operations[owner]),
+                if root in {'fastapi.FastAPI', 'fastapi.APIRouter', 'starlette.routing.Router', 'starlette.applications.Starlette'} and method in {'get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'route', 'api_route', 'websocket'}:
+                    prefix = ''
+                    receiver = decorator['target'].rpartition('.')[0]
+                    bindings = [binding for binding in entry['facts'].get('bindings', [])
+                                if binding['name'] == receiver and binding['owner'] == '']
+                    if len(bindings) == 1:
+                        prefix = bindings[0].get('routePrefix')
+                        if prefix is None and 'routePrefix' not in bindings[0]:
+                            prefix = ''
+                    route_path = (prefix + decorator['path']) if prefix is not None and decorator['path'] is not None else '<dynamic>'
+                    if method in {'route', 'api_route'}:
+                        methods = decorator['methods'] if decorator.get('methodsSpecified') else ['GET']
+                        methods = [value if isinstance(value, str) else '<DYNAMIC>' for value in methods] or ['<DYNAMIC>']
+                    else:
+                        methods = [method.upper()]
+                    for route_method in sorted(set(value.upper() for value in methods if isinstance(value, str))):
+                        route_key = owner + canonical + route_method + ':' + route_path
+                        if route_path == '<dynamic>':
+                            route_key += ':' + str(decorator['line'])
+                        oid = identity('entry', route_key)
+                        if oid in operations:
+                            continue  # Repeated identical registration is one static candidate.
+                        op = {'id': oid, 'kind': 'http_entry', 'title': 'HTTP route: ' + route_method + ' ' + route_path,
+                          'routeMethod': route_method, 'routePath': route_path,
                           'evidenceIds': operations[owner]['evidenceIds'], 'sourcePattern': canonical,
-                          'uncertainty': ['Router inclusion and runtime deployment require review']}
-                    model['operations'].append(op)
-                    operations[oid] = op
-                    edge(oid, owner, 'dispatch_candidate', op['evidenceIds'], 'Observed decorator and router constructor; deployment not proven')
-                    entries.append({'id': oid, 'kind': 'http'})
-                    events.append({'operationId': oid, 'ownerId': owner, 'ownerOperationId': owner,
+                          'uncertainty': ['Local router prefix only; router inclusion and runtime deployment require review']}
+                        model['operations'].append(op)
+                        operations[oid] = op
+                        edge(oid, owner, 'dispatch_candidate', op['evidenceIds'], 'Observed decorator and router constructor; deployment not proven')
+                        entries.append({'id': oid, 'kind': 'http'})
+                        events.append({'operationId': oid, 'ownerId': owner, 'ownerOperationId': owner,
                                    'kind': 'http_entry', 'path': path, 'line': symbol['line']})
 
     # Registration ties callback parameters to broker behavior and static
@@ -110,6 +131,11 @@ def enrich(result):
             kind = 'async_boundary'
         if target == 'fastapi.Depends':
             kind = 'dependency'
+            uncertainty.append('Dependency declaration only; injection, invocation and cleanup lifecycle are unverified')
+            declaration_owner = resolver.local.get((call['path'], call.get('declarationFor')))
+            if declaration_owner:
+                edge(declaration_owner, call['operationId'], 'dependency_declaration', [call['evidenceId']],
+                     'Declared dependency configuration; not per-invocation execution or cleanup proof')
         if target in {'fastapi.BackgroundTasks.add_task', 'starlette.background.BackgroundTasks.add_task'}:
             kind = 'background_task'
             callback = resolver.find(call['arguments'][0], call['path'], call['owner']) if call.get('arguments') else None

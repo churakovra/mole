@@ -54,6 +54,9 @@ def start(repo, workspace, mode, scope):
     manifest = {"repo": str(repo), "mode": mode, "scope": scope,
                 "engineVersion": __version__}
     with locked(workspace, create=True) as directory:
+        from molekit.investigations import is_workspace
+        if is_workspace(directory):
+            raise MoleError('WORKSPACE_CONFLICT', 'Use a separate workspace for v1; this workspace contains v2 investigations.', 5)
         path = directory / "state.json"
         if path.exists():
             state = load(directory)
@@ -94,6 +97,13 @@ def advance(state, directory):
 
 
 def operate(command, workspace, **options):
+    from molekit import investigations
+    if investigations.is_workspace(workspace):
+        return investigations.operate(command, workspace, **options)
+    if options.pop('request_id', None) is not None:
+        raise MoleError('INVALID_REQUEST', 'Request selection is only available for v2 investigations.')
+    if options.pop('query',None) is not None:
+        raise MoleError('INVALID_REQUEST','Query probes require a v2 investigation.')
     with locked(workspace) as directory:
         state = load(directory)
         if command == "status":
@@ -207,6 +217,10 @@ def build_outputs(state, output, logical_output, formats, partial, previous, qua
     from molekit.markdown import documents
     model = state['scan']['model']
     generated = documents(model, state["manifest"]["repo"], output, partial)
+    if state.get('deliveryContext'):
+        context=state['deliveryContext']
+        from molekit.markdown import text
+        generated['README.md']='# Investigation\n\n'+text(context.get('question',''))+'\n\n'+context.get('answer','')+'\n\n[Answer and limitations](answer.md)\n\n'+generated['README.md']
     if "changeReport" in state:
         from molekit.markdown import text
         report = state["changeReport"]
@@ -221,9 +235,9 @@ def build_outputs(state, output, logical_output, formats, partial, previous, qua
         generated["change-report.md"] = "\n".join(lines)
     if "html" in formats:
         from molekit.html import render
-        import os
-        source_prefix = os.path.relpath(state['manifest']['repo'], output).replace(os.sep, '/')
-        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(logical_output.resolve()))[:24], source_prefix)
+        from molekit.safety import relative_source_path
+        source_prefix = relative_source_path(state['manifest']['repo'], output)
+        generated["explorer.html"] = render(model, partial, digest(str(Path(state["manifest"]["repo"]).resolve()) + str(logical_output.resolve()))[:24], source_prefix, state.get('deliveryContext'))
     else:
         generated["README.md"] = generated["README.md"].replace(" · [Explorer](explorer.html)", "")
     if "drawio" in formats and model["diagramViews"]:

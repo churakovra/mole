@@ -2,6 +2,11 @@
 
 ## 0.1.0 — unreleased
 
+- Goal-bound v2 investigations, bounded retrieval and adaptive evidence loop.
+- Canonical process graph, source-bound answer completion and process Explorer.
+- Fresh follow-up knowledge reuse with conservative incremental invalidation.
+- Installed-payload acceptance harness and explicit test handoff; no stable release.
+
 - Correct method lexical scope and nested argument evaluation order.
 - Reconstruct conditional joins and loop/early-exit candidates; report unsupported control regions.
 - Expose omitted workflow scope through bounded deferred metadata and quality limitations.

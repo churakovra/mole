@@ -90,6 +90,11 @@ def layout(model, view):
     edges = {edge['id']: edge for edge in model['relationships']}
     included = [edges[identity] for identity in view['edgeIds']]
     columns = layers(list(nodes), included)
+    if nodes and (not included or all(edge['kind'] in {'business_handoff', 'business_transition'} for edge in included)):
+        # Keep the business map compact and readable, including connected
+        # processes. Arrows retain the authored topology across folded rows.
+        width = min(3, math.ceil(math.sqrt(len(nodes))))
+        columns = {column: list(nodes)[column::width] for column in range(width)}
     sizes = {}
     for identity, node in nodes.items():
         lines = textwrap.wrap(node['label'], width=28, break_long_words=True) or ['']

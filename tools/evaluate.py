@@ -23,6 +23,17 @@ EXPECTED = {
 }
 
 
+def delivery_receipt_outcome(receipt):
+    """Evaluate artifact presence only, never semantic correctness or an LLM.
+
+    Successful tool calls and a prose response cannot replace required formats.
+    Presence is necessary but requires separate semantic/browser review.
+    """
+    missing = sorted(set(receipt['requiredFormats']) - set(receipt['deliveredFormats']))
+    return {'outcome': 'user_goal_not_met' if missing else 'requires_semantic_review',
+            'missingFormats': missing}
+
+
 def evaluate():
     results = []
     for fixture, expected in EXPECTED.items():
@@ -57,7 +68,11 @@ def evaluate():
         (repo / 'app.py').write_text('from sqlalchemy.orm import Session\nclass Cache:\n    objects = set()\ndef local_only():\n    values=set()\n    values.add(1)\n    Cache.objects.add(2)\n')
         negative = enrich(scan(repo,workspace))
         adapter_negative = not any(op['kind'] in {'db_write','db_read'} for op in negative['model']['operations'])
+    negative_receipt = json.loads((ROOT / 'tests/fixtures/acceptance/premature-exit.json').read_text(encoding='utf-8'))
+    receipt_result = delivery_receipt_outcome(negative_receipt)
     return {"environment": {"python": platform.python_version(), "platform": platform.system()},
+            'prematureExitNegative': {**receipt_result, 'check': 'PASS' if receipt_result['outcome'] == negative_receipt['expectedOutcome'] else 'FAIL',
+                                      'provenance': negative_receipt['provenance']},
             "fixtures": results, "tokens": "unavailable", "llmLedBaseline": "NOT_RUN",
             'negativeAdapterCheck': 'PASS' if adapter_negative else 'FAIL',
             "multiModelEval": "NOT_RUN", "semanticBlindReview": "NOT_RUN",
@@ -74,4 +89,4 @@ if __name__ == "__main__":
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
-    raise SystemExit(result['negativeAdapterCheck'] != 'PASS' or any(item["goldenPatterns"] != "PASS" or item['workflowScope'] != 'PASS' for item in result["fixtures"]))
+    raise SystemExit(result['negativeAdapterCheck'] != 'PASS' or result['prematureExitNegative']['check'] != 'PASS' or any(item["goldenPatterns"] != "PASS" or item['workflowScope'] != 'PASS' for item in result["fixtures"]))
