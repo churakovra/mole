@@ -9,7 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'skills/mole'))
 from molekit.adapters import enrich
 from molekit.errors import MoleError
 from molekit.knowledge import compose
-from molekit.process_graph import empty_graph,merge_graph,validate_process_graph
+from molekit.process_graph import active_relation,empty_graph,merge_graph,project,supported_relation,validate_process_graph
 from molekit.scanner import scan
 
 SOURCE='def complete(score):\n    if score >= 10:\n        return credit(score)\n    return "ineligible"\ndef credit(score): return score\ndef purchase(balance,cost): return balance-cost\n'
@@ -86,6 +86,33 @@ class ProcessGraphTests(unittest.TestCase):
             graph['processHandoffs'][0]['resolution']=resolution
             with self.subTest(resolution=resolution),self.assertRaises(MoleError):
                 validate_process_graph(graph,self.model)
+
+    def test_inferred_handoff_is_visible_but_not_delivery_supported(self):
+        edge=copy.deepcopy(self.graph['processHandoffs'][0])
+        edge.update(resolution='inferred',limitations=['Static call path is suggestive, not an established business handoff.'])
+        claims={self.claim['id']:self.claim}
+        self.assertTrue(active_relation(edge,claims))
+        self.assertFalse(supported_relation(edge,claims))
+        self.graph['processHandoffs']=[edge]
+        self.scan['processGraph']=self.graph
+        model=project(self.scan)
+        projected=next(item for item in model['relationships'] if item.get('evidenceStatus')=='inferred')
+        self.assertEqual(projected['resolution'],'possible')
+        self.assertEqual(projected['evidenceStatus'],'inferred')
+
+    def test_documented_intent_is_supported_with_visible_provenance(self):
+        edge=copy.deepcopy(self.graph['processHandoffs'][0])
+        edge['resolution']='documented_intent'
+        edge['claimIds']=['claim-doc']
+        claim={**self.claim,'id':'claim-doc','status':'documented_intent'}
+        claims={self.claim['id']:self.claim,claim['id']:claim}
+        self.assertTrue(supported_relation(edge,claims))
+        model=copy.deepcopy(self.model);model['claims']=[self.claim,claim]
+        graph=copy.deepcopy(self.graph);graph['processHandoffs']=[edge]
+        scan={**self.scan,'model':model,'processGraph':graph}
+        validate_process_graph(graph,model)
+        projected=next(item for item in project(scan)['relationships'] if item.get('evidenceStatus')=='documented_intent')
+        self.assertEqual(projected['resolution'],'possible')
 
     def test_hierarchy_cycles_rejected_and_child_refs_are_valid(self):
         relation={'id':'hierarchy-one','parentProcessId':'process-complete','childProcessId':'process-credit',

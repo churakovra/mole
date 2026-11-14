@@ -43,7 +43,9 @@ class DeliveryTests(unittest.TestCase):
         self.assertFalse((self.root/'unwanted').exists())
         self.assertFalse((self.workspace/'outputs').exists())
         state=self.workspace/'investigations/req-one/state.json';before=state.read_bytes()
-        self.assertEqual(operate('check',self.workspace)['goalStatus'],'READY_TO_PRESENT')
+        checked=operate('check',self.workspace)
+        self.assertEqual(checked['goalStatus'],'READY_TO_PRESENT')
+        self.assertEqual(checked['verificationScope'],'structural_and_evidence_only')
         self.assertEqual(before,state.read_bytes())
 
     def test_map_cannot_complete_after_inspect_or_prose_alone(self):
@@ -92,6 +94,21 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(result['investigationState'],'PARTIAL_READY')
 
 class MapDeliveryTests(unittest.TestCase):
+    def test_inferred_handoff_does_not_satisfy_delivery_gate(self):
+        from test_process_graph import GraphSubmissionTests
+        from molekit.delivery import assess
+        from molekit.investigations import _knowledge,_manifest,_session
+        fixture=GraphSubmissionTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        fixture.patch['processGraph']['processHandoffs'][0].update(resolution='inferred',
+            limitations=['This static relationship is a hypothesis.'])
+        fixture.submit(fixture.patch)
+        manifest=_manifest(fixture.workspace);session=_session(fixture.workspace,manifest)
+        scan=_knowledge(fixture.workspace,session)
+        result=assess(session,scan)
+        row=next(item for item in result['requirements'] if item['kind']=='supported_process_handoffs')
+        self.assertEqual(row['status'],'MISSING')
+        self.assertEqual(result['verificationScope'],'structural_and_evidence_only')
+
     def test_generated_map_is_checked_and_tampering_revokes_ready(self):
         from test_process_graph import GraphSubmissionTests
         fixture=GraphSubmissionTests();fixture.setUp()

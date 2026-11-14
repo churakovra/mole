@@ -19,9 +19,13 @@ publisher. Publication intent includes request, answer and semantic snapshot
 hashes. All manifest-owned files are checked, including linked documents.
 Changing source, semantics, answer or files revokes readiness. Partial delivery
 requires explicit PARTIAL/BLOCKED outcome, limitations and `--allow-partial`;
-READY_TO_PRESENT is never a forced-completion flag. Interrupted publication can
-retry unchanged or use `--restart-export` after correcting input. Preserve the
-workspace, active generation and authored notes.
+READY_TO_PRESENT means the structural, provenance, freshness and artifact checks
+passed (`verificationScope: structural_and_evidence_only`). It is not an
+independent check of semantic truth or usefulness; `selfReview` is the host
+agent's attestation. Inferred handoffs remain visible as possibilities and do
+not satisfy the delivery gate. Explicit documented intent is labeled as such.
+Interrupted publication can retry unchanged or use `--restart-export` after
+correcting input. Preserve the workspace, active generation and authored notes.
 
 The HTML explorer includes the original redacted question and answer. Orientation
 starts with business processes; focused maps/trace start with the matching process
@@ -32,10 +36,12 @@ locators degrade to text across incompatible volumes. Browser-local edits are
 presentation only.
 
 A follow-up is another `begin` request with `action: "followUp"`,
-`parentRequestId`, `turnId` and a new question. Omitted intent, focus and constraints
-inherit; explicit replacements win. Source freshness is checked before sharing
-immutable semantic knowledge. Original goals and answers remain independent;
-no READY state is inherited. Use a new requestId or allow deterministic allocation.
+`parentRequestId`, `turnId`, a new question, and newly classified `intent` and
+`deliverable`. Audience, source scopes, technical limits and focus context may
+inherit. Search routes/paths and artifact preference do not. Source freshness is
+checked before sharing immutable semantic knowledge. Original goals and answers
+remain independent; no READY state is inherited. Use a new requestId or allow
+deterministic allocation.
 A stale parent must be updated first.
 
 `update` retains claims only when cited evidence and their authoring task scopes

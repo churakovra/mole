@@ -185,6 +185,12 @@ def active_relation(edge,claims):
     return edge.get('resolution')!='unknown' and all(claims[cid]['status'] not in {'unknown','contradicted'} for cid in edge['claimIds'])
 
 
+def supported_relation(edge,claims):
+    """Whether an active relation has an explicit, reviewable basis for delivery."""
+    return (edge.get('resolution') in {'observed_static','documented_intent'} and
+            all(claims[cid]['status'] not in {'unknown','contradicted'} for cid in edge['claimIds']))
+
+
 def project(scan):
     """Project canonical knowledge; module grouping only supplies technical views."""
     from molekit.knowledge import compose,MAX_VIEWS

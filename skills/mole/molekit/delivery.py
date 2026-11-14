@@ -114,14 +114,17 @@ def assess(session,scan,answer=None):
     if pending_reviews: source=False
     nav=bool(graph['processes']) and all(process['stepIds'] for process in graph['processes'])
     explanations=nav and all(known(p['claimIds']) for p in graph['processes']) and all(known(step['claimIds']) for step in graph['steps'])
-    from molekit.process_graph import active_relation
+    from molekit.process_graph import active_relation,supported_relation
     handoffs=bool(graph['processes'])
     for process in graph['processes']:
         review=process.get('handoffReview')
-        incident=[edge for edge in graph['processHandoffs'] if process['id'] in (edge['fromProcessId'],edge['toProcessId']) and edge['kind']!='association' and active_relation(edge,claims)]
-        if not review or review['status']=='unknown' or not known(review['claimIds']) or review['status']=='supported' and not incident or review['status']=='independent' and incident:
+        incident=[edge for edge in graph['processHandoffs'] if edge['fromProcessId']==process['id'] and edge['kind']!='association' and active_relation(edge,claims)]
+        supported=[edge for edge in incident if supported_relation(edge,claims)]
+        if not review or review['status']=='unknown' or not known(review['claimIds']) or review['status']=='supported' and not supported or review['status'] in {'independent','terminal'} and incident:
             handoffs=False
-    if any(not active_relation(edge,claims) for edge in graph['processHandoffs']): handoffs=False
+    if any(edge['kind']!='association' and
+           (not active_relation(edge,claims) or not supported_relation(edge,claims))
+           for edge in graph['processHandoffs']): handoffs=False
     artifacts,artifact_reason=artifact_check(session)
     facts={'question_answered':has_answer,'precise_location':has_answer and source,'scope_disclosed':bool(answer and answer['limitations']),
         'source_traceability':source,'business_overview':bool(graph['processes']),
@@ -163,6 +166,7 @@ def assess(session,scan,answer=None):
     partial=bool(answer and (answer['outcome'] in {'PARTIAL','BLOCKED'} or answer['selfReview']['knownGaps']))
     return {'requirements':rows,'done':[item['id'] for item in rows if item['status']=='SATISFIED'],
         'missing':missing,'evidenceCoverage':session.get('retrieval',{}).get('coverage','PARTIAL'),
+        'verificationScope':'structural_and_evidence_only',
         'blockers':['MATERIAL_CLAIM_REVIEW_REQUIRED'] if pending_reviews else [],
         'goalStatus':'READY_TO_PRESENT' if not missing and not partial else 'PARTIAL_READY' if has_answer and answer['outcome']=='PARTIAL' and (not session['request']['deliverable']['formats'] or artifacts) else 'BLOCKED' if answer and answer['outcome']=='BLOCKED' else 'EVALUATING',
         'nextRecommendedAction':'present' if not missing and not partial else 'repair_deliverable','partial':partial}

@@ -60,11 +60,19 @@ actions produce no new evidence or justified hypothesis; never turn a repeated
 read into a blocker. Never fill tasks with generic unknowns
 just to get a green status. Use `check --workspace <WORKSPACE> --json` to review missing goal criteria; then `complete --workspace <WORKSPACE> --answer <ANSWER_JSON> --json` with `schemas/answer-draft.v1.schema.json`. Add `--output` for requested artifacts. An explicitly limited result requires `--allow-partial`; it never becomes fully ready. The legacy v1 `start/finish` protocol remains compatible.
 
-Before presenting: verify the original question is answered, claims are sourced,
-evidence is fresh, required artifacts exist and open, and important gaps are
-stated. Check process/step/evidence/Back navigation when a browser is available;
-otherwise report that interaction check unverified. Return a clickable absolute
-artifact link and a short useful conclusion. Keep CLI/JSON internals out of the
+Before `complete`, compare the proposed answer with the original question and
+identify any unanswered part. Check each material statement against its cited
+claim and evidence; distinguish static source observations from runtime facts;
+check that process handoffs are actually supported; and preserve uncertainty
+instead of filling gaps with guesses. `selfReview` records the agent's
+attestation. The engine's `READY_TO_PRESENT` and `verificationScope` cover
+structure, provenance, freshness and artifact integrity, not independent proof
+of truth or usefulness. Product UX still needs the owner's acceptance.
+
+Before presenting, verify required artifacts exist and open. Check
+process/step/evidence/Back navigation when a browser is available; otherwise
+report that interaction check unverified. Return a clickable absolute artifact
+link and a short useful conclusion. Keep CLI/JSON internals out of the
 user-facing response unless requested. Partial delivery must remain explicit.
 
 ## Boundaries
