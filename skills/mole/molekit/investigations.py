@@ -240,14 +240,22 @@ def begin(repo, workspace, request):
     raw = read_json(request, max_bytes=256*1024)
     parent_id=None
     if isinstance(raw,dict) and raw.get('action')=='followUp':
+        explicit_focus='focus' in raw
         parent_id=raw.get('parentRequestId')
         if not parent_id or not raw.get('turnId') or not raw.get('question'):
             raise MoleError('INVALID_REQUEST','A follow-up requires parentRequestId, turnId and a new question.')
         with locked(workspace) as parent_directory:
             parent_manifest=_manifest(parent_directory)
             parent=_session(parent_directory,parent_manifest,parent_id)
-            inherited={key:copy.deepcopy(value) for key,value in parent['request'].items() if key not in {'requestId','action','parentRequestId','turnId','question'}}
+            if 'intent' not in raw or 'deliverable' not in raw:
+                raise MoleError('INVALID_REQUEST','Reclassify the new question and supply intent and deliverable for every follow-up.')
+            inherited={key:copy.deepcopy(parent['request'][key]) for key in
+                       ('audience','indexScope','answerScope','focus','limits') if key in parent['request']}
             raw={**inherited,**raw}
+            # Parent focus remains context. Only a newly supplied focus becomes
+            # a search seed; parent search paths/routes never carry forward.
+            if explicit_focus and not raw.get('search'):
+                raw['search']={'focusSymbols':raw['focus']}
     value = validate_request(raw)
     repo = Path(repo).resolve()
     root = Path(workspace).absolute()

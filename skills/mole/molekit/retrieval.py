@@ -219,10 +219,11 @@ def query_for_request(request, override=None):
     browse='system_orientation' in request['intent'] and not request['focus'] and not data
     direction='forward' if 'trace' in request['intent'] else 'both' if 'investigate' in request['intent'] else 'none'
     explicit_seeds=bool(seed_fields & data.keys())
+    inherited_context=request.get('action')=='followUp'
     # A new literal symbol/topic/path probe must not accidentally retain an
     # exact route or focus from the original goal and drown out the new seed.
     query=SearchQuery(text=data.get('text','' if browse or explicit_seeds else request['question']),
-        focus_symbols=tuple(data.get('focusSymbols',[] if explicit_seeds else request['focus'])),paths=tuple(data.get('paths',[])),
+        focus_symbols=tuple(data.get('focusSymbols',[] if explicit_seeds or inherited_context else request['focus'])),paths=tuple(data.get('paths',[])),
         route_hints=tuple(data.get('routeHints',[])),topics=tuple(data.get('topics',[])),
         direction=data.get('direction',direction),limit=min(data.get('limit',request['limits']['maxNodes'] if browse else 20),request['limits']['maxNodes']),
         max_depth=min(data.get('maxDepth',request['limits']['maxGraphHops']),request['limits']['maxGraphHops']),

@@ -8,16 +8,21 @@ from molekit.investigations import begin,operate
 from molekit.errors import MoleError
 
 class FollowupTests(unittest.TestCase):
-    def fixture(self):
+    def fixture(self,parent_options=None):
         from test_delivery_contract import DeliveryTests
         fixture=DeliveryTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        fixture.value.update(parent_options or {})
         fixture.start();fixture.complete();return fixture
 
-    def test_followup_inherits_focus_and_semantics_but_not_answer(self):
-        fixture=self.fixture();before=operate('status',fixture.workspace)
+    def test_followup_reclassifies_goal_and_drops_parent_search_and_output(self):
+        fixture=self.fixture({'search':{'paths':['app.py']},
+            'userOutputPreference':'artifacts'})
+        before=operate('status',fixture.workspace)
         path=fixture.root/'followup.json'
         path.write_text(json.dumps({'requestVersion':'2.0','requestId':'req-two','action':'followUp',
-            'parentRequestId':'req-one','turnId':'turn-two','question':'What about invalid tokens?'}))
+            'parentRequestId':'req-one','turnId':'turn-two','question':'What about invalid tokens?',
+            'intent':['explain'],'deliverable':{'contractVersion':'1.0','deliverableType':'chat_answer',
+                'requirements':[{'id':'answer','kind':'question_answered','required':True}],'formats':[]}}))
         result=begin(fixture.repo,fixture.workspace,path)
         self.assertEqual(result['requestId'],'req-two')
         self.assertNotEqual(result['investigationState'],'READY_TO_PRESENT')
@@ -25,13 +30,28 @@ class FollowupTests(unittest.TestCase):
         new=json.loads((fixture.workspace/'investigations/req-two/state.json').read_text())
         self.assertEqual(new['semanticRef'],old['semanticRef'])
         self.assertEqual(new['request']['focus'],old['request']['focus'])
+        self.assertEqual(new['request']['intent'],['explain'])
+        self.assertEqual(new['request']['deliverable']['deliverableType'],'chat_answer')
+        self.assertNotIn('search',new['request'])
+        self.assertEqual(new['request']['userOutputPreference'],'auto')
+        self.assertEqual(new['request']['indexScope'],old['request']['indexScope'])
         self.assertNotIn('answerRef',new)
         self.assertEqual(operate('status',fixture.workspace,request_id='req-one')['investigationState'],before['investigationState'])
+
+    def test_followup_requires_new_intent_and_deliverable(self):
+        fixture=self.fixture()
+        path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','action':'followUp',
+            'parentRequestId':'req-one','turnId':'next','question':'What about rollback?'}))
+        with self.assertRaises(MoleError) as caught:begin(fixture.repo,fixture.workspace,path)
+        self.assertEqual(caught.exception.code,'INVALID_REQUEST')
+        self.assertIn('reclassify',str(caught.exception).lower())
 
     def test_followup_rejects_stale_parent(self):
         fixture=self.fixture();(fixture.repo/'app.py').write_text('def changed(): pass\n')
         path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','action':'followUp',
-            'parentRequestId':'req-one','turnId':'next','question':'What about rollback?'}))
+            'parentRequestId':'req-one','turnId':'next','question':'What about rollback?',
+            'intent':['investigate'],'deliverable':{'contractVersion':'1.0','deliverableType':'chat_answer',
+                'requirements':[{'id':'answer','kind':'question_answered','required':True}],'formats':[]}}))
         with self.assertRaises(MoleError) as caught:begin(fixture.repo,fixture.workspace,path)
         self.assertEqual(caught.exception.code,'TASK_STALE')
 
