@@ -86,11 +86,13 @@ request `search` or `next --query QUERY.json` for explicit mechanical query
 primitives. New queries add probes to the same queue without changing the
 original question; repeated equivalent queries do not duplicate tasks. See
 [retrieval](v2-retrieval.md) for ranking, ambiguity, scope and frontier behavior.
-`done` stays empty and requirements UNASSESSED: exhausting tasks never
-returns READY_TO_PRESENT. `finish/export` are v1 commands; v2 goal completion and
-artifact validation are not implemented at this stage. `update` conservatively
-reopens all accepted v2 meaning while retaining its prior snapshot references in
-history. Selective incremental semantic reuse is a later stage.
+`check` reports machine-assessed goal requirements; it does not independently
+verify semantic truth. A `READY_TO_PRESENT` result includes
+`verificationScope: "structural_and_evidence_only"`. `complete` validates the
+answer and publishes requested v2 artifacts. `finish/export` remains available
+for v1 compatibility. `update` refreshes source and selectively reuses claims,
+process knowledge and evidence whose source revision and scope remain valid;
+affected meaning is reopened for review and prior snapshots stay in history.
 
 ## V2 delivery and follow-ups
 

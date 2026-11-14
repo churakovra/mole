@@ -39,9 +39,9 @@ requests do not require HTML. See the bundled
 For "explain how this service works", the default deliverable is a local HTML
 business-process explorer: start with named processes, open their plain-language
 steps and failure paths, then drill into implementation diagrams and source
-evidence. Scenario explanations include triggers, actors, outcomes and unknowns.
+evidence. Process descriptions include triggers, actors, outcomes and unknowns.
 Additional static scopes are grouped separately from authored business processes.
-Labeled process handoffs and branch transitions cite authored claims; arrows do
+Labeled process handoffs and step transitions cite authored claims; arrows do
 not imply verified runtime behavior. Ordering alone does not create connectors.
 
 Invoke `$mole` in a compatible shell-enabled agent with your question, audience,
@@ -55,18 +55,9 @@ and desired scope. The agent follows the bundled [protocol](skills/mole/referenc
 
 Examples: `$mole Where is JWT checked?`, `$mole Explain verify_jwt`,
 `$mole Trace POST /complete`, `$mole Investigate duplicate rewards`, and
-`$mole Explain to me how this service works`. See [v2 delivery](docs/v2-delivery.md)
-and the [test handoff](docs/ux-evaluation.md). The lower-level start/finish example
-below is retained for legacy compatibility.
-
-For example, after resolving the installed skill directory:
-
-```bash
-python3 /absolute/path/to/mole/scripts/mole.py start \
-  --repo /absolute/target/repo --workspace /absolute/workspace \
-  --mode standard --scope repository --json
-python3 /absolute/path/to/mole/scripts/mole.py next --workspace /absolute/workspace --json
-```
+`$mole Explain to me how this service works`. See [v2 delivery](docs/v2-delivery.md),
+the [CLI reference](docs/cli-reference.md), and the [test handoff](docs/ux-evaluation.md).
+The CLI reference marks the legacy v1 `start/finish` flow separately.
 
 Scope can also be a repository-relative file or directory. The engine owns
 state/validation and never calls an LLM API. Its tasks require the current agent's

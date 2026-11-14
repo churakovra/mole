@@ -1,72 +1,72 @@
-# Goal-specific v1 delivery recipes
+# V2 goal-specific delivery recipes
 
-Resolve `MOLE` below to `python3 <ABSOLUTE_SKILL_DIR>/scripts/mole.py` and use
-external `REPO`, `WORKSPACE` and `OUTPUT` paths. These are agent-facing recipes,
-not commands the end user must compose. Read the protocol for patch/paging details.
-Every path begins with `MOLE doctor --json`.
+Use the v2 `begin → next/inspect/submit → check → complete` workflow for every
+new request. `doctor --json` checks the installed payload first. The host agent
+chooses the user's goal and deliverable; MOLE validates them and preserves
+source evidence. Read [the protocol](agent-protocol.md) for paging, recovery and
+follow-up rules.
+
+Every request has `requestVersion: "2.0"`, the original `question`, a newly
+classified `intent`, and a `deliverable` with `contractVersion: "1.0"`, a
+deliverable type, required requirements, and formats. Add audience, scope,
+limits, focus and optional mechanical search seeds when useful. See
+[`analysis-request.v2.schema.json`](../schemas/analysis-request.v2.schema.json).
 
 ## Locate
 
-Example: "Where is JWT checked?" Determine a likely file from repository context;
-use `start --repo REPO --workspace WORKSPACE --scope app.py --json`, `next`,
-and paginated `inspect`. Explain the exact symbol/path/lines and what the source
-actually checks. Submit the source-backed claim where appropriate. No `finish`
-or output directory is needed for chat. If the symbol is absent, state the
-searched scope and limitations; a missing AST edge is not proof of absence.
+For “Where is JWT checked?”, use `intent: ["locate"]` and a `chat_answer`
+contract requiring `question_answered` and `precise_location`. Inspect the
+matching declaration and source evidence. Return its path, relevant lines,
+actual behavior and limits. A bounded negative search is not proof that a
+symbol or runtime behavior does not exist.
 
-## Explain a narrow object
+## Explain
 
-Example: "Explain verify_jwt." Use the same bounded file workflow, inspect the
-function and necessary callers/effects, then give purpose, inputs, actions and
-unknowns with citations. Do not require the entire repository task queue to
-finish. An index/path boundary may limit the explanation; disclose it.
+For “Explain `verify_jwt`”, use `intent: ["explain"]` and `chat_answer`. Inspect
+the function plus only the callers/effects needed to explain its behavior.
+Describe purpose, inputs, actions, evidence and unknowns without implying that
+the whole repository was covered.
 
 ## Trace
 
-Example: "Trace POST /orders to publication." Start with `--scope repository`
-so dependencies outside the API directory remain available. `next`, `inspect`
-and `submit` source-backed findings, distinguishing branch/order candidates
-from runtime proof. Return the relevant path, conditions, effects and boundaries.
-Generate a focused artifact only when requested; v1 cannot automatically filter
-its global index to a question, so keep the answer bounded and state coverage.
+For “Trace `POST /orders` to publication”, use `intent: ["trace"]` and a
+`chat_answer` with `trace_path` and `source_traceability` requirements. Start
+with the route, follow bounded source relationships, and report the sequence,
+conditions, effects and static/runtime boundary. Request an interactive map
+only when the user asks for one.
 
 ## Investigate
 
-Example: "Why duplicate notifications?" Inspect publication, consumption,
-acknowledgement, retry/exception paths and negative evidence. Submit claims with
-explicit inferred/unknown status when needed. Return hypotheses with supporting
-and opposing evidence and concrete unchecked factors. Do not claim exactly-once,
-atomicity or security guarantees from static names or an agent review verdict.
-An investigation report can be delivered in chat unless a file was requested.
+For “Why are notifications duplicated?”, use `intent: ["investigate"]` and an
+`investigation_report` or `chat_answer` requiring `hypotheses` and
+`source_traceability`. Inspect publication, consumption, acknowledgement,
+retry and exception paths. Separate evidence for and against each hypothesis;
+name unchecked factors. Do not infer exactly-once, atomicity or security from
+names or static source alone.
 
 ## Service orientation
 
-Example: "Explain how this service works." Start a repository-scoped session,
-use bounded `next/inspect/submit` work to author named business processes and
-evidence-backed links/step transitions. Follow `ux-contract.md`. Continue the
-justified task loop, then use `finish --workspace WORKSPACE --output OUTPUT
---format markdown --format html --json`. Use `--allow-partial` only for an
-honestly partial deliverable with specific limitations. Open the returned
-active bundle's Explorer and check navigation/evidence. Return its link plus
-the key explanation. A prose-only summary is insufficient unless text-only
-was explicitly requested. Text-only orientation uses the same investigation
-but does not require export.
+For “Explain how this service works”, use `intent: ["system_orientation"]` and
+an `interactive_process_map` contract with HTML plus the requested text format.
+Author business processes, steps, transitions and explicit process handoffs in
+the canonical `ProcessGraph`. A prose summary or technical component diagram
+alone does not satisfy the map request. Follow [the v2 UX contract](ux-contract.md).
 
 ## Document
 
-Example: "Document payment pipeline in Markdown and HTML." Investigate the
-requested pipeline, submit evidence-backed semantic content, then
-`finish --workspace WORKSPACE --output OUTPUT --format markdown --format html
---json`. Add `--format drawio` only when required; Markdown is always included
-by v1. For Markdown-only use `--format markdown`. Verify requested files and
-source/deep links, retain manual notes, and return usable artifact links.
-On output conflict preserve authored content; resolve it or choose a new output.
+For “Document the payment pipeline in Markdown and HTML”, use `intent:
+["document"]` and `explicit_artifacts` with exactly those requested formats.
+Ground each process and assertion in inspected evidence, generate the requested
+files with `complete`, then verify their integrity and links. Preserve authored
+notes and previous output generations.
 
-## Recovery and completion
+## Expected delivery and recovery
 
-Repeated `next` does not mean progress. After meaningful work compare the result
-with the original question. Use `diff/update` for stale sources and resume the
-affected task; do not reuse stale proof. Retry malformed patches using the
-specific error, not blind repetition. If two rounds produce no new evidence or
-justified hypothesis, report the concrete blocker or scope limit. Engine
-technical/semantic/export status and user-goal satisfaction are distinct.
+After `submit`, use `check` to review unmet requirements. Repair a specific gap
+or explain a bounded limitation; do not fill tasks with generic unknowns. Run
+`complete` only after checking the original question, cited claims, static vs
+runtime scope, process handoffs and remaining gaps. Read-only repeated `next`
+or identical `inspect` calls do not count as no progress. Update stale sources
+before reusing their evidence. A follow-up is a new request with its own intent
+and deliverable; fresh evidence may be reused. The legacy v1 `start/finish`
+workflow remains available as a separate compatibility protocol.

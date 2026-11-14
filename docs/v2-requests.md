@@ -1,8 +1,9 @@
 # V2 request and investigation contract
 
-This includes the PR-02 foundation and PR-03 ranked retrieval. Adaptive planning,
-completion and selective follow-up reuse are later stages. V1 `start` is preserved; there is
-no implicit migration, cleanup or overwrite of old workspaces or output bundles.
+V2 requests bind an explicit user goal and deliverable to a shared source
+snapshot. Planning, bounded retrieval, completion, source updates and follow-up
+reuse are implemented. V1 `start/finish` remains compatible; there is no
+implicit migration, cleanup or overwrite of old workspaces or output bundles.
 
 ## Admission fields
 
@@ -36,9 +37,10 @@ overridden by an artifact contract. These are validation rules, not inferred
 intent defaults: the host must choose the contract.
 
 Limits default to 12 probe rounds, 160000 total evidence characters, 12000
-characters per probe, 8 graph hops, 200 nodes and 2 no-progress rounds. Accepted
-ranges are in the schema. This stage stores limits; enforcement of investigative
-rounds is introduced with the later bounded planner. Existing inspect response
+characters per probe, 8 graph hops, 200 nodes and a reserved no-progress value
+of 2. Accepted ranges are in the schema. Probe, task and evidence budgets are
+enforced. Read-only `next` and repeated reads of the same `inspect` page are
+idempotent and do not consume no-progress rounds. Existing inspect response
 limits remain enforced, including request metadata in v2's reply budget.
 
 ## Storage and recovery
@@ -71,8 +73,8 @@ source snapshot and object store. An explicit request selector avoids active
 request ambiguity; cross-request task references are rejected.
 
 Source changes produce STALE. `diff` is observational. `update` writes a new
-shared snapshot, retains the old source/semantic references in session history,
-and reopens semantic work conservatively. Neither old objects nor prior artifact
-generations are deleted. Questions, task completion and global source coverage
-are separate facts. Goal completion is now assessed by `check` and `complete`;
-see [completion and follow-up reuse](v2-delivery.md).
+shared snapshot, retains old source/semantic references in session history, and
+reuses unaffected evidence and meaning while reopening affected work. Neither
+old objects nor prior artifact generations are deleted. Questions, task
+completion and global source coverage are separate facts. Goal completion is
+assessed by `check` and `complete`; see [completion and follow-up reuse](v2-delivery.md).
