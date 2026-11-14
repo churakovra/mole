@@ -187,7 +187,7 @@ def active_relation(edge,claims):
 
 def supported_relation(edge,claims):
     """Whether an active relation has an explicit, reviewable basis for delivery."""
-    return (edge.get('resolution') in {'observed_static','documented_intent'} and
+    return (edge.get('resolution') in {'observed_static','observed_runtime','documented_intent'} and
             all(claims[cid]['status'] not in {'unknown','contradicted'} for cid in edge['claimIds']))
 
 

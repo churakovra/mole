@@ -24,6 +24,8 @@ passed (`verificationScope: structural_and_evidence_only`). It is not an
 independent check of semantic truth or usefulness; `selfReview` is the host
 agent's attestation. Inferred handoffs remain visible as possibilities and do
 not satisfy the delivery gate. Explicit documented intent is labeled as such.
+An `observed_runtime` relation can satisfy it only when validated against a
+runtime trace and reviewed runtime claim.
 Interrupted publication can retry unchanged or use `--restart-export` after
 correcting input. Preserve the workspace, active generation and authored notes.
 

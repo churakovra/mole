@@ -114,6 +114,12 @@ class ProcessGraphTests(unittest.TestCase):
         projected=next(item for item in project(scan)['relationships'] if item.get('evidenceStatus')=='documented_intent')
         self.assertEqual(projected['resolution'],'possible')
 
+    def test_runtime_verified_relation_is_delivery_supported(self):
+        edge=copy.deepcopy(self.graph['processHandoffs'][0])
+        edge['resolution']='observed_runtime'
+        claim={**self.claim,'status':'runtime_verified'}
+        self.assertTrue(supported_relation(edge,{claim['id']:claim}))
+
     def test_hierarchy_cycles_rejected_and_child_refs_are_valid(self):
         relation={'id':'hierarchy-one','parentProcessId':'process-complete','childProcessId':'process-credit',
             'entryStepId':'step-credit','claimIds':['claim-flow'],'evidenceIds':self.graph['steps'][0]['evidenceIds']}

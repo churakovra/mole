@@ -36,7 +36,8 @@ never invent a connector.
 An `inferred` relationship may appear in the explorer as a possibility, with its
 uncertainty visible. It does not satisfy the `supported_process_handoffs`
 delivery requirement. `observed_static` must reflect an actual static source
-relationship. `documented_intent` remains explicitly labeled as documented
+relationship. `observed_runtime` requires a cited runtime trace and a reviewed
+runtime claim. `documented_intent` remains explicitly labeled as documented
 intent. A process with no outgoing handoff must have a deliberate
 `handoffReview.status` such as `independent` or `terminal`; `unknown` remains an
 open requirement. Downgraded or contradicted claims withdraw dependent arrows
