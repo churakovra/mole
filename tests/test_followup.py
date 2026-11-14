@@ -60,6 +60,17 @@ class FollowupTests(unittest.TestCase):
         self.assertEqual(caught.exception.code,'INVALID_REQUEST')
         self.assertIn('reclassify',str(caught.exception).lower())
 
+    def test_explicit_followup_focus_is_a_new_search_seed(self):
+        fixture=self.fixture()
+        path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','requestId':'focused-followup',
+            'action':'followUp','parentRequestId':'req-one','turnId':'focused','question':'Explain rollback handling.',
+            'intent':['explain'],'focus':['rollback_handler'],'search':{'limit':10},
+            'deliverable':{'contractVersion':'1.0','deliverableType':'chat_answer',
+                'requirements':[{'id':'answer','kind':'question_answered','required':True}],'formats':[]}}))
+        begin(fixture.repo,fixture.workspace,path)
+        state=json.loads((fixture.workspace/'investigations/focused-followup/state.json').read_text())
+        self.assertEqual(state['request']['search']['focusSymbols'],['rollback_handler'])
+
     def test_map_followup_can_be_a_chat_answer(self):
         fixture=self.map_fixture()
         path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','requestId':'rollback-answer',

@@ -254,8 +254,10 @@ def begin(repo, workspace, request):
             raw={**inherited,**raw}
             # Parent focus remains context. Only a newly supplied focus becomes
             # a search seed; parent search paths/routes never carry forward.
-            if explicit_focus and not raw.get('search'):
-                raw['search']={'focusSymbols':raw['focus']}
+            if explicit_focus:
+                search=copy.deepcopy(raw.get('search') or {})
+                search.setdefault('focusSymbols',raw['focus'])
+                raw['search']=search
     value = validate_request(raw)
     repo = Path(repo).resolve()
     root = Path(workspace).absolute()
