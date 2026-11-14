@@ -7,6 +7,18 @@ from pathlib import Path
 from molekit.errors import MoleError
 
 
+def relative_source_path(target, output):
+    """Return a portable relative link, or None for different Windows volumes.
+
+    Callers retain a repository-relative source locator when a link cannot be
+    made. Never fall back to an absolute file URI exposing local paths.
+    """
+    try:
+        return os.path.relpath(target, output).replace(os.sep, '/')
+    except ValueError:
+        return None
+
+
 def read_source(root, path, limit=1024 * 1024):
     root = Path(root).resolve()
     path = Path(path).absolute()

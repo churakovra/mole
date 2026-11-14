@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:cli-envelope:v2",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {"type": "string", "enum": ["2.0"]},
+    "ok": {"type": "boolean"},
+    "requestId": {"type": "string"},
+    "currentGoal": {"type": "string"},
+    "requiredDeliverable": {"type": "object"},
+    "engineState": {"type": "string", "enum": ["NEW", "INDEXING", "READY", "STALE", "ERROR"]},
+    "investigationState": {"type": "string", "enum": ["PLANNING", "INVESTIGATING", "EVALUATING", "READY_TO_PRESENT", "PARTIAL_READY", "BLOCKED"]},
+    "done": {"type": "array", "items": {"type": "string"}},
+    "missing": {"type": "array", "items": {"type": "string"}},
+    "nextRecommendedAction": {"type": "string"}
+  },
+  "required": ["protocolVersion", "ok", "requestId", "currentGoal", "requiredDeliverable", "engineState", "investigationState", "done", "missing", "nextRecommendedAction"],
+  "additionalProperties": true
+}

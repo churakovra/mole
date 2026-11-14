@@ -27,6 +27,25 @@ def dense_model():
 
 
 class LayoutTests(unittest.TestCase):
+    @unittest.skipUnless(Path(BROWSER).is_file(), 'Chrome unavailable')
+    def test_seven_process_overview_is_readable_without_zoom(self):
+        model = dense_model()
+        model['relationships'] = []
+        model['operations'] = model['operations'][:7]
+        view = model['diagramViews'][0]
+        view['nodes'] = [{'id': op['id'], 'label': 'Business process ' + str(i)} for i, op in enumerate(model['operations'])]
+        view['edgeIds'] = []
+        geometry = layout(model, view)
+        self.assertEqual(len({point['column'] for point in geometry['nodes'].values()}), 3)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = browser_test(render(model), '''
+for(const node of document.querySelectorAll('.node')) {
+  check(node.querySelector('rect').getBoundingClientRect().width>=180,'overview card shrank below readable size');
+}
+check(document.documentElement.scrollWidth<=innerWidth,'overview expanded page');
+''', tmp)
+            self.assertTrue(result['ok'], result)
+
     def test_determinism_and_nonoverlapping_node_rectangles(self):
         model = dense_model()
         first = layout(model, model["diagramViews"][0])

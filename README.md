@@ -31,14 +31,33 @@ An incomplete payload or unsupported interpreter produces an explicit error.
 
 ## Agent workflow
 
+Ask a specific question for a concise sourced answer, trace a path, investigate a
+failure, or request documentation in selected formats. Explicit text-only
+requests do not require HTML. See the bundled
+[delivery recipes](skills/mole/references/delivery-recipes.md).
+
+For "explain how this service works", the default deliverable is a local HTML
+business-process explorer: start with named processes, open their plain-language
+steps and failure paths, then drill into implementation diagrams and source
+evidence. Scenario explanations include triggers, actors, outcomes and unknowns.
+Additional static scopes are grouped separately from authored business processes.
+Labeled process handoffs and branch transitions cite authored claims; arrows do
+not imply verified runtime behavior. Ordering alone does not create connectors.
+
 Invoke `$mole` in a compatible shell-enabled agent with your question, audience,
 and desired scope. The agent follows the bundled [protocol](skills/mole/references/agent-protocol.md):
 
-1. Start/resume a workspace, preferably outside the source repository for read-only analysis.
+1. Admit the original goal and deliverable with begin in a workspace outside the source repository.
 2. Use next and paginated inspect to investigate source-backed tasks.
-3. Submit revision-bound claims and optional named scenarios, business mappings and glossary entries.
-4. Finish/export to a dedicated output directory; report unknowns and partial coverage explicitly.
-5. Use diff/update after source changes, then review affected tasks and regenerate.
+3. Submit revision-bound claims and canonical processes, steps and supported handoffs.
+4. Use check and complete: chat needs no files; maps publish a validated Explorer generation.
+5. Follow up using shared fresh knowledge; use diff/update after source changes.
+
+Examples: `$mole Where is JWT checked?`, `$mole Explain verify_jwt`,
+`$mole Trace POST /complete`, `$mole Investigate duplicate rewards`, and
+`$mole Explain to me how this service works`. See [v2 delivery](docs/v2-delivery.md)
+and the [test handoff](docs/ux-evaluation.md). The lower-level start/finish example
+below is retained for legacy compatibility.
 
 For example, after resolving the installed skill directory:
 
@@ -109,7 +128,9 @@ The tests exercise an isolated copy of only the skill, complete CLI workflow
 with network/process denial, persistence/update failures, source/JSON/security
 boundaries, XML/XSD (when configured), and actual Chrome interactions/geometry.
 See [evaluation evidence](docs/evaluation.md), [branch status](DEVELOPMENT-STATUS.md),
-and [contribution guidance](CONTRIBUTING.md). The three original planning documents
-remain unchanged references. No branch has been merged, pushed or released.
+and [contribution guidance](CONTRIBUTING.md). The original development guide,
+implementation plan and PR backlog remain unchanged references. The v2 workflow
+and test handoff are documented in [delivery](docs/v2-delivery.md) and
+[UX evaluation](docs/ux-evaluation.md).
 
 Licensed under [Apache-2.0](LICENSE). The same license is included in the skill payload.

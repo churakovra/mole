@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:answer-draft:v1",
+  "type": "object",
+  "properties": {
+    "answerVersion": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "requestId": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "baseRevision": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "responseMarkdown": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "assertions": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "claimIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "uniqueItems": true
+          },
+          "evidenceIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "uniqueItems": true
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "hypothesis",
+              "negative_result",
+              "runtime_guarantee"
+            ]
+          },
+          "guaranteeKind": {
+            "type": "string",
+            "enum": [
+              "security",
+              "delivery",
+              "transaction",
+              "idempotency",
+              "other"
+            ]
+          },
+          "searchScope": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "text",
+          "claimIds",
+          "evidenceIds",
+          "category"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4000
+      }
+    },
+    "selfReview": {
+      "type": "object",
+      "properties": {
+        "goalMatched": {
+          "type": "boolean"
+        },
+        "knownGaps": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "readabilityChecked": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "goalMatched",
+        "knownGaps",
+        "readabilityChecked"
+      ],
+      "additionalProperties": false
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "ANSWERED",
+        "NOT_FOUND",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "traceOperationIds": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "uniqueItems": true
+    },
+    "hypotheses": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "evidenceFor": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "uniqueItems": true
+          },
+          "evidenceAgainst": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "uniqueItems": true
+          },
+          "unverified": {
+            "type": "boolean"
+          },
+          "nextChecks": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000
+            }
+          }
+        },
+        "required": [
+          "text",
+          "evidenceFor",
+          "evidenceAgainst",
+          "unverified",
+          "nextChecks"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "answerVersion",
+    "requestId",
+    "baseRevision",
+    "responseMarkdown",
+    "assertions",
+    "limitations",
+    "selfReview",
+    "outcome"
+  ],
+  "additionalProperties": false
+}

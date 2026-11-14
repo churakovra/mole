@@ -13,6 +13,24 @@ def create_tasks(scan, mode):
     model = scan["model"]
     budget = {"quick": 20, "standard": 100, "deep": 500}[mode]
     tasks = []
+    # Establish the service's purpose before a potentially huge component task.
+    # Reuse ordinary document evidence/contracts; this is documented intent,
+    # never a shortcut to runtime verification or source coverage.
+    orientation = [op for op in model['operations'] if op['kind'] == 'documented_input'
+                   and (op['title'].lower() in {'readme.md', 'readme.rst', 'readme.txt'}
+                        or (len(Path(op['title']).parts) <= 2 and
+                            Path(op['title']).stem.lower() in {'architecture', 'business-processes', 'workflows'}))]
+    orientation = sorted(orientation, key=lambda op: (len(Path(op['title']).parts), op['title']))[:4]
+    orientation_ids = {op['id'] for op in orientation}
+    if orientation:
+        task = {'id': identity('task', 'service-orientation:' + ':'.join(sorted(orientation_ids))),
+                'kind': 'document_review', 'scopeKind': 'service_orientation', 'priority': 'critical',
+                'question': 'Map business processes from overview documents first. Author named scenarios, plain-language steps, outcomes, actors and unknowns, with evidence-backed links between processes and stepTransitions for paths/branches. Mark documentation as intended behavior; source tasks refine implementation. A list of disconnected cards is not a process map when handoffs are known.',
+                'operationIds': sorted(orientation_ids),
+                'evidenceIds': sorted({ev for op in orientation for ev in op['evidenceIds']}),
+                'baseRevision': model['revision'], 'status': 'pending', 'responseSchema': 'semantic-patch.v1'}
+        contract(task, 'task')
+        tasks.append(task)
     from molekit.flow import workflows
     candidates = workflows(scan, max_candidates=budget)
     for workflow in candidates:
@@ -26,14 +44,15 @@ def create_tasks(scan, mode):
         contract(task, "task")
         tasks.append(task)
     for operation in model["operations"]:
-        if operation["kind"] in {"documented_input", "text_input"}:
+        if operation["kind"] in {"documented_input", "text_input"} and operation['id'] not in orientation_ids:
             task = {"id": identity("task", operation["id"]), "kind": "document_review", "priority": "normal",
                     "question": "Explain intended workflows and unknowns from " + operation["title"] + "; do not infer verified runtime behavior.",
                     "evidenceIds": operation["evidenceIds"], "baseRevision": model["revision"],
                     "status": "pending", "responseSchema": "semantic-patch.v1"}
             contract(task, "task")
             tasks.append(task)
-    tasks.sort(key=lambda task: (task["priority"] != "critical", task.get("scopeKind") != "workflow", task["id"]))
+    tasks.sort(key=lambda task: (task.get('scopeKind') != 'service_orientation',
+                                 task["priority"] != "critical", task.get("scopeKind") != "workflow", task["id"]))
     if len(tasks) > budget:
         scan["limitations"].append({"path": ".", "reason": "semantic_task_budget_exceeded"})
     return tasks[:budget]
@@ -229,6 +248,20 @@ def accept_patch(state, task, patch):
                 raise MoleError("SENSITIVE_INPUT", "Patch contains sensitive-looking content.")
     candidate = {**state["scan"]["model"], "claims": state["scan"]["model"]["claims"] + patch["claims"]}
     claim_ids = {claim["id"] for claim in patch["claims"]}
+    current_claims = {claim['id']: claim for claim in patch['claims']}
+    links = [link for scene in patch.get('scenarios', [])
+             for field in ('links', 'stepTransitions') for link in scene.get(field, [])]
+    links += [link for amendment in patch.get('scenarioAmendments', [])
+              for field in ('addLinks', 'addStepTransitions') for link in amendment.get(field, [])]
+    authored_scene_ids = {scene['id'] for scene in state['scan'].get('semantic', {}).get('scenarios', [])}
+    authored_scene_ids.update(scene['id'] for scene in patch.get('scenarios', []))
+    for link in links:
+        if 'targetScenarioId' in link and link['targetScenarioId'] not in authored_scene_ids:
+            raise MoleError('DANGLING_REFERENCE', 'Process links must target an existing or newly authored scenario, not an extraction candidate.')
+        if not link['claimIds'] or not set(link['claimIds']) <= claim_ids or any(
+                not current_claims[cid]['evidenceIds'] or current_claims[cid]['status'] in {'unknown', 'contradicted'}
+                for cid in link['claimIds']):
+            raise MoleError('INSUFFICIENT_EVIDENCE', 'New transitions need evidence-backed current task claims; leave unknown relationships unconnected.')
     allowed_operations = {op["id"] for op in candidate["operations"]
                           if op["kind"] != "scenario_summary" and set(op["evidenceIds"]) & set(task["evidenceIds"])}
     if "operationIds" in task:
@@ -260,6 +293,9 @@ def accept_patch(state, task, patch):
         for branch in amendment.get('addFailurePaths', []):
             if not branch['operationIds'] or not set(branch['operationIds']) <= allowed_operations or not branch['claimIds'] or not set(branch['claimIds']) <= claim_ids:
                 raise MoleError('INSUFFICIENT_EVIDENCE', 'Added failure paths require current task evidence.')
+        for link in [*amendment.get('addLinks', []), *amendment.get('addStepTransitions', [])]:
+            if not link['claimIds'] or not set(link['claimIds']) <= claim_ids:
+                raise MoleError('INSUFFICIENT_EVIDENCE', 'Added transitions require current task claims.')
         pending = [amendment]
         while pending:
             value = pending.pop()

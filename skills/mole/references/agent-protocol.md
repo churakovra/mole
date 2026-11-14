@@ -1,12 +1,30 @@
 # Local task protocol
 
+New investigations use the v2 goal protocol: `begin --repo <REPO> --workspace <WORKSPACE> --request <REQUEST_JSON> --json`, then `next/inspect/submit`, `check`, and `complete --answer <ANSWER_JSON> [--output <OUTPUT_DIR>]`. Requests use `schemas/analysis-request.v2.schema.json`; answers use `schemas/answer-draft.v1.schema.json`; canonical maps use [process graphs](process-graph.md). `check` is read-only. `complete` binds the answer and output generation to current source and semantics. Chat requires no export. Review material claims returned as `claim_review` tasks. For a deliberately limited result, state PARTIAL and limitations and use `--allow-partial`. After an interrupted artifact build whose intent changed, `complete --restart-export` safely restarts publication while preserving active generations and authored content.
+
+## Legacy v1 compatibility
+
+
 All commands below use `python3 <ABSOLUTE_SKILL_DIR>/scripts/mole.py`.
+
+First establish original question, scope and required deliverable using
+[delivery recipes](delivery-recipes.md). The task loop below is the v1 mechanical
+protocol, not permission to expand a narrow question or force an export. For
+chat-only goals, stop semantic investigation when the bounded answer is supported
+and disclose its limits; for required artifacts, intermediate prose is not
+delivery. After each meaningful stage reassess the original goal. Before final
+presentation validate source freshness, claim support, format, artifact
+existence/openability and important unknowns. After two rounds without new
+evidence or a justified hypothesis, report a concrete blocker instead of looping.
 
 1. `doctor --json` checks the interpreter.
 2. `start --repo <REPO> --workspace <WORKSPACE> --mode standard --scope repository --json`
    creates or resumes a session. Prefer an external workspace for read-only analysis.
 3. `next --workspace <WORKSPACE> --json` scans once and returns the highest-priority
    pending task. Repeated next is safe and does not complete tasks.
+   When overview documents exist, a grouped service-orientation task comes first.
+   Use it to author the opening business map as documented intent, then refine
+   those processes with source-backed tasks; it does not establish source coverage.
 4. `inspect --workspace <WORKSPACE> --task <TASK_ID> --budget-chars 12000 --json`
    returns source-located context. Continue with `--cursor <nextCursor>` until null.
 5. Write a semantic-patch JSON file and pass it to
@@ -50,9 +68,27 @@ quick/standard/deep limit semantic task counts to 20/100/500 respectively;
 truncation is explicitly recorded as a limitation, not full coverage.
 No LLM API calls occur inside the engine.
 
+For advanced v2 investigations, canonical process authoring uses the separate
+[process graph contract](process-graph.md). V1 workflows below remain compatible.
+
 ## Named scenarios, business mappings and glossary
 
-Patches may additionally include `scenarios`, `businessSteps` and `glossary`
+For a service explanation, author `scenarios` with ordered plain-language `steps`;
+these form the process diagrams, with each step linking to its implementation.
+Actors, trigger, outcomes, conditions and failure boundaries appear in the explorer.
+Step connectors represent authored transitions, not verified execution; preserve
+asynchronous and conditional boundaries in the descriptions and conditions.
+Author `links: [{targetScenarioId, label, condition, claimIds}]` for inter-process
+handoffs and `stepTransitions: [{fromStep, toStep, label, condition, claimIds}]`
+for actual paths inside a process. Step indexes are zero-based, local to `steps`
+and stable under append-only amendments. Multiple steps can use the same document
+operation as evidence. Include failure outcomes as steps if they need connectors.
+The renderer does not infer transition topology from array order. Each connection
+must cite evidence-backed claims in its scenario; unknown or contradicted claims
+cannot establish a new connector. If explicit claim review later downgrades a
+supporting claim, the authored link remains for review but its arrow is withdrawn.
+`addLinks` and `addStepTransitions` extend these arrays through normal amendments.
+Patches may additionally include `businessSteps` and `glossary`
 arrays following the bundled semantic-patch schema. Their IDs must start with
 `semantic-`; they must cite claims in the same patch. Scenario and business-step
 operationIds must belong to the task's evidence. Inspect returns bounded operation
@@ -115,12 +151,20 @@ manually after preserving any edits. JSON quality/loss sidecars describe limits.
 
 ## Bounded control flow and deferred scopes (0.1.0)
 
-Parser v7 reconstructs argument evaluation, branch joins, loop back/exit paths,
+Parser v9 reconstructs argument evaluation, branch joins, loop back/exit paths,
 and break/continue/return/raise boundaries from source AST. These are static
 candidates. Context managers, comprehensions, lazy expressions, complex finally
 completion and other unsupported regions produce explicit coverage limitations;
 they do not establish runtime behavior. A parser-version update reopens semantic
 review rather than silently retaining the previous graph.
+
+Stacked HTTP routes have method/path-specific identities. A statically known
+local router prefix is included; mounted router prefixes and deployment remain
+unverified. Dynamic methods/paths stay explicitly unknown. Decorator/default
+expressions are declaration evidence. `Depends` configuration is associated
+with its callable through `dependency_declaration`, not an invocation-body
+edge; injection order, runtime execution and cleanup lifecycle require review.
+Document headings are redacted bounded search metadata, not semantic assertions.
 
 Workflow tasks include `limitations` and `deferredOperationIds`. The latter lists
 reachable operations omitted by the workflow node budget. They are metadata,
@@ -130,3 +174,12 @@ not additional authorized operations: claims and scenario additions must stay in
 omitted list. Narrow the requested repository scope for a complete smaller run.
 Node-budget truncation remains a quality limitation even if every selected task
 has been answered.
+
+## Answer source locators
+
+AnswerDraft Markdown links use repository-relative source paths and optional
+`#LSTART-LEND` anchors, for example a link destination of `app.py#L7-L10`. The path/span
+must be covered by evidence cited in assertions. Do not use desktop absolute
+paths, `file://`, external URLs or `app.py:7` as link destinations. The artifact
+publisher relocates safe source links to the generated output directory; across
+incompatible volumes it shows a source locator instead.

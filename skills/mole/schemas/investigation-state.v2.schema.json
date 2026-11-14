@@ -1,0 +1,646 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:investigation-state:v2",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [
+        2
+      ]
+    },
+    "requestId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "requestHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "repoKey": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "repositorySnapshotRef": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "request": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "urn:mole:analysis-request:v2",
+      "type": "object",
+      "properties": {
+        "requestVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "enum": [
+            "2.0"
+          ]
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "intent": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "enum": [
+              "locate",
+              "explain",
+              "trace",
+              "investigate",
+              "system_orientation",
+              "document"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "focus": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "minItems": 0,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "indexScope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "answerScope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "userOutputPreference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "enum": [
+            "auto",
+            "text_only",
+            "artifacts"
+          ]
+        },
+        "deliverable": {
+          "type": "object",
+          "properties": {
+            "contractVersion": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "enum": [
+                "1.0"
+              ]
+            },
+            "deliverableType": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "enum": [
+                "chat_answer",
+                "focused_map",
+                "interactive_process_map",
+                "investigation_report",
+                "explicit_artifacts"
+              ]
+            },
+            "requirements": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "enum": [
+                      "question_answered",
+                      "precise_location",
+                      "scope_disclosed",
+                      "trace_path",
+                      "hypotheses",
+                      "business_overview",
+                      "supported_process_handoffs",
+                      "subprocess_navigation",
+                      "human_explanations",
+                      "source_traceability",
+                      "requested_artifacts"
+                    ]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "required"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true
+            },
+            "formats": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "enum": [
+                  "html",
+                  "markdown",
+                  "drawio",
+                  "mermaid"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 4,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "contractVersion",
+            "deliverableType",
+            "requirements",
+            "formats"
+          ],
+          "additionalProperties": false
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "maxProbeRounds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "maxEvidenceChars": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 2000000
+            },
+            "maxProbeChars": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 32000
+            },
+            "maxGraphHops": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "maxNodes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "noProgressRounds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "search": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "urn:mole:search-query:v1",
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "focusSymbols": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "paths": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "routeHints": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "topics": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "forward",
+                "reverse",
+                "both",
+                "none"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "maxDepth": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32
+            },
+            "maxNodes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "maxEdges": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
+          },
+          "additionalProperties": false
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "investigate",
+            "followUp"
+          ]
+        },
+        "parentRequestId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+        },
+        "turnId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "required": [
+        "requestVersion",
+        "question",
+        "intent",
+        "deliverable"
+      ],
+      "additionalProperties": false
+    },
+    "investigationState": {
+      "type": "string",
+      "enum": [
+        "PLANNING",
+        "INVESTIGATING",
+        "EVALUATING",
+        "READY_TO_PRESENT",
+        "PARTIAL_READY",
+        "BLOCKED"
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "UNDERSTAND",
+        "PLAN",
+        "PROBE",
+        "INTERPRET",
+        "EVALUATE",
+        "REVISE",
+        "VALIDATE_DELIVERABLE",
+        "PRESENT"
+      ]
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object"
+      }
+    },
+    "submissions": {
+      "type": "object"
+    },
+    "taskClaims": {
+      "type": "object"
+    },
+    "claimReviews": {
+      "type": "object"
+    },
+    "semanticRef": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "repositorySnapshotRef": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "semanticRef": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "repositorySnapshotRef",
+          "semanticRef"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      }
+    },
+    "counters": {
+      "type": "object",
+      "properties": {
+        "probeRounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidenceChars": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "noProgressRounds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "probeRounds",
+        "evidenceChars",
+        "noProgressRounds"
+      ],
+      "additionalProperties": false
+    },
+    "retrieval": {
+      "type": "object"
+    },
+    "queries": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "query": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "urn:mole:search-query:v1",
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "maxLength": 8192
+              },
+              "focusSymbols": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "paths": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "routeHints": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "topics": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "forward",
+                  "reverse",
+                  "both",
+                  "none"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "maxDepth": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 32
+              },
+              "maxNodes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "maxEdges": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "hash",
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "pages": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": {
+            "type": "string"
+          }
+        },
+        "startedTasks": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceIds": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastNext": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockedReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "pages",
+        "startedTasks",
+        "evidenceIds",
+        "lastNext",
+        "blockedReason"
+      ],
+      "additionalProperties": false
+    },
+    "answerRef": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "delivery": {
+      "type": "object"
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "type": "string"
+        },
+        "outputGeneration": {
+          "type": "string"
+        },
+        "exportBases": {
+          "type": "object"
+        },
+        "pendingExport": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "answerHistory": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "requestHash",
+    "repoKey",
+    "repositorySnapshotRef",
+    "request",
+    "investigationState",
+    "phase",
+    "tasks",
+    "submissions",
+    "taskClaims",
+    "claimReviews",
+    "semanticRef",
+    "history",
+    "limitations",
+    "counters"
+  ],
+  "additionalProperties": false
+}
