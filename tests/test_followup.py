@@ -8,6 +8,20 @@ from molekit.investigations import begin,operate
 from molekit.errors import MoleError
 
 class FollowupTests(unittest.TestCase):
+    def map_fixture(self):
+        from molekit.investigations import operate
+        from test_process_graph import GraphSubmissionTests
+        fixture=GraphSubmissionTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        fixture.submit(fixture.patch)
+        answer={'answerVersion':'1.0','requestId':'process-map','baseRevision':fixture.task['baseRevision'],
+            'responseMarkdown':'Completion can credit a wallet. Purchase is independently callable.',
+            'assertions':[{'text':fixture.claim['statement'],'claimIds':[fixture.claim['id']],
+                'evidenceIds':fixture.claim['evidenceIds'],'category':'observation'}],
+            'limitations':['Static source only.'],'selfReview':{'goalMatched':True,'readabilityChecked':True,'knownGaps':[]},'outcome':'ANSWERED'}
+        path=fixture.root/'answer.json';path.write_text(json.dumps(answer))
+        operate('complete',fixture.workspace,answer=path,output=fixture.root/'output')
+        return fixture
+
     def fixture(self,parent_options=None):
         from test_delivery_contract import DeliveryTests
         fixture=DeliveryTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
@@ -45,6 +59,33 @@ class FollowupTests(unittest.TestCase):
         with self.assertRaises(MoleError) as caught:begin(fixture.repo,fixture.workspace,path)
         self.assertEqual(caught.exception.code,'INVALID_REQUEST')
         self.assertIn('reclassify',str(caught.exception).lower())
+
+    def test_map_followup_can_be_a_chat_answer(self):
+        fixture=self.map_fixture()
+        path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','requestId':'rollback-answer',
+            'action':'followUp','parentRequestId':'process-map','turnId':'rollback','question':'What if rollback happens?',
+            'intent':['explain'],'deliverable':{'contractVersion':'1.0','deliverableType':'chat_answer',
+                'requirements':[{'id':'answer','kind':'question_answered','required':True}],'formats':[]}}))
+        result=begin(fixture.repo,fixture.workspace,path)
+        state=json.loads((fixture.workspace/'investigations/rollback-answer/state.json').read_text())
+        self.assertEqual(state['semanticRef'],json.loads((fixture.workspace/'investigations/process-map/state.json').read_text())['semanticRef'])
+        self.assertEqual(state['request']['deliverable']['deliverableType'],'chat_answer')
+        self.assertEqual(state['request']['deliverable']['formats'],[])
+        self.assertNotIn('answerRef',state)
+        self.assertNotEqual(result['investigationState'],'READY_TO_PRESENT')
+
+    def test_map_followup_can_explicitly_request_another_map(self):
+        fixture=self.map_fixture()
+        path=fixture.root/'followup.json';path.write_text(json.dumps({'requestVersion':'2.0','requestId':'error-map',
+            'action':'followUp','parentRequestId':'process-map','turnId':'error','question':'Add the error handling branch.',
+            'intent':['system_orientation'],'deliverable':{'contractVersion':'1.0','deliverableType':'interactive_process_map',
+                'requirements':[{'id':'overview','kind':'business_overview','required':True}],'formats':['html','markdown']}}))
+        result=begin(fixture.repo,fixture.workspace,path)
+        state=json.loads((fixture.workspace/'investigations/error-map/state.json').read_text())
+        self.assertEqual(state['request']['deliverable']['deliverableType'],'interactive_process_map')
+        self.assertEqual(result['processGraph']['processesCount'],3)
+        self.assertNotIn('answerRef',state)
+        self.assertNotEqual(result['investigationState'],'READY_TO_PRESENT')
 
     def test_followup_rejects_stale_parent(self):
         fixture=self.fixture();(fixture.repo/'app.py').write_text('def changed(): pass\n')
