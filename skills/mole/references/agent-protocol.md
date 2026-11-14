@@ -2,6 +2,10 @@
 
 New investigations use the v2 goal protocol: `begin --repo <REPO> --workspace <WORKSPACE> --request <REQUEST_JSON> --json`, then `next/inspect/submit`, `check`, and `complete --answer <ANSWER_JSON> [--output <OUTPUT_DIR>]`. Requests use `schemas/analysis-request.v2.schema.json`; answers use `schemas/answer-draft.v1.schema.json`; canonical maps use [process graphs](process-graph.md). `check` is read-only. `complete` binds the answer and output generation to current source and semantics. Chat requires no export. Review material claims returned as `claim_review` tasks. For a deliberately limited result, state PARTIAL and limitations and use `--allow-partial`. After an interrupted artifact build whose intent changed, `complete --restart-export` safely restarts publication while preserving active generations and authored content.
 
+Repeated `next` calls and repeated `inspect` reads of the same page are idempotent; they do not spend a no-progress allowance or block the investigation. A no-progress stop is reserved for distinct, substantive investigation actions that yield neither new evidence nor a justified hypothesis. Resource limits and stale-source blockers remain enforced.
+
+For each follow-up, reinterpret the new question and supply its own `intent` and `deliverable`. Audience, source scope, technical limits and topical context may carry forward; prior answers, completion state, search routes/paths and artifact preference do not. Reuse fresh evidence where relevant, while keeping the new goal explicit.
+
 ## Legacy v1 compatibility
 
 
@@ -14,8 +18,9 @@ chat-only goals, stop semantic investigation when the bounded answer is supporte
 and disclose its limits; for required artifacts, intermediate prose is not
 delivery. After each meaningful stage reassess the original goal. Before final
 presentation validate source freshness, claim support, format, artifact
-existence/openability and important unknowns. After two rounds without new
-evidence or a justified hypothesis, report a concrete blocker instead of looping.
+existence/openability and important unknowns. Repeated reads alone do not
+establish no progress; report a blocker only after substantive actions fail to
+produce evidence or a justified hypothesis.
 
 1. `doctor --json` checks the interpreter.
 2. `start --repo <REPO> --workspace <WORKSPACE> --mode standard --scope repository --json`

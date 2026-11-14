@@ -53,9 +53,11 @@ step transitions using [the process graph contract](references/process-graph.md)
 
 Do not stop after one inspect or intermediate prose when an artifact is required.
 Continue justified investigation/repair until the deliverable is usable, a
-concrete blocker is established, or a bounded limit is reached. After two rounds
-without new evidence or a new justified hypothesis, stop repeating the same
-operation and explain the missing proof. Never fill tasks with generic unknowns
+concrete blocker is established, or a bounded limit is reached. Repeating a
+read-only `next` or the same `inspect` page is idempotent and does not consume
+the no-progress allowance. Stop only after two real, distinct investigation
+actions produce no new evidence or justified hypothesis; never turn a repeated
+read into a blocker. Never fill tasks with generic unknowns
 just to get a green status. Use `check --workspace <WORKSPACE> --json` to review missing goal criteria; then `complete --workspace <WORKSPACE> --answer <ANSWER_JSON> --json` with `schemas/answer-draft.v1.schema.json`. Add `--output` for requested artifacts. An explicitly limited result requires `--allow-partial`; it never becomes fully ready. The legacy v1 `start/finish` protocol remains compatible.
 
 Before presenting: verify the original question is answered, claims are sourced,

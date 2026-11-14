@@ -25,9 +25,6 @@ def record_page(session,task,page,cursor):
     key=fingerprint([session['repositorySnapshotRef'],task['id'],cursor,
         page.get('context'),page.get('operations'),page.get('graphChunk'),page.get('nextCursor')])
     if key in state['pages']:
-        counters['noProgressRounds']+=1
-        if counters['noProgressRounds']>=limits['noProgressRounds']:
-            block(session,'NO_NEW_EVIDENCE')
         return
     charge=sum(len(item.get('text','')) for item in page.get('context',[]))
     charge+=len(page.get('graphChunk',''))+len(json.dumps(page.get('operations',[]),ensure_ascii=True))
@@ -70,15 +67,15 @@ def structural_gaps(session,scan):
 
 def next_task(session,scan):
     state=progress(session)
-    signature=fingerprint([session['repositorySnapshotRef'],session['semanticRef'],session['counters']['evidenceChars']])
-    if state['lastNext']==signature:
-        session['counters']['noProgressRounds']+=1
-    else:
-        session['counters']['noProgressRounds']=0
-    state['lastNext']=signature
-    if state['blockedReason']=='EVIDENCE_BUDGET_EXHAUSTED' or session['counters']['noProgressRounds']>=session['request']['limits']['noProgressRounds']:
-        block(session,state['blockedReason'] or 'NO_NEW_EVIDENCE')
+    if state['blockedReason']=='EVIDENCE_BUDGET_EXHAUSTED':
+        block(session,'EVIDENCE_BUDGET_EXHAUSTED')
         return None
+    # Older sessions could be blocked by repeated read-only calls. That reason
+    # has no measured work behind it, so allow the same pending task to resume.
+    if state['blockedReason']=='NO_NEW_EVIDENCE':
+        state['blockedReason']=None
+        session['counters']['noProgressRounds']=0
+        session.update(investigationState='INVESTIGATING',phase='PROBE')
     pending=next((task for task in session['tasks'] if task['status']=='pending'),None)
     if pending: return pending
     graph=scan.get('processGraph') or {'processes':[]}

@@ -23,26 +23,31 @@ class AgentLoopTests(unittest.TestCase):
         begin(self.repo,self.workspace,path)
         return operate('next',self.workspace)['task']
 
-    def test_repeated_next_blocks_without_completing_any_task(self):
-        self.start()
-        operate('next',self.workspace)
-        result=operate('next',self.workspace)
-        self.assertEqual(result['investigationState'],'BLOCKED')
-        self.assertEqual(result['progress']['blockedReason'],'NO_NEW_EVIDENCE')
-        self.assertIsNone(result['task'])
-        self.assertTrue(result['pending'])
-        self.assertEqual(result['done'],[])
-
-    def test_new_evidence_recovers_no_progress_but_repeated_page_is_not_progress(self):
+    def test_repeated_next_is_idempotent_and_does_not_block(self):
         task=self.start()
-        operate('next',self.workspace);operate('next',self.workspace)
+        results=[operate('next',self.workspace) for _ in range(5)]
+        self.assertTrue(all(result['task']==task for result in results))
+        self.assertTrue(all(result['investigationState']=='INVESTIGATING' for result in results))
+        self.assertTrue(all(result['progress']['noProgressRounds']==0 for result in results))
+
+    def test_repeated_page_read_is_idempotent_and_unique_page_is_charged_once(self):
+        task=self.start()
         page=operate('inspect',self.workspace,task=task['id'],budget_chars=12000)
         self.assertEqual(page['investigationState'],'INVESTIGATING')
         charged=page['progress']['evidenceChars']
-        operate('inspect',self.workspace,task=task['id'],budget_chars=12000)
-        repeated=operate('inspect',self.workspace,task=task['id'],budget_chars=12000)
-        self.assertEqual(repeated['progress']['evidenceChars'],charged)
-        self.assertEqual(repeated['investigationState'],'BLOCKED')
+        repeated=[operate('inspect',self.workspace,task=task['id'],budget_chars=12000) for _ in range(5)]
+        self.assertTrue(all(result['progress']['evidenceChars']==charged for result in repeated))
+        self.assertTrue(all(result['progress']['probeRounds']==1 for result in repeated))
+        self.assertTrue(all(result['investigationState']=='INVESTIGATING' for result in repeated))
+        self.assertTrue(all(result['progress']['noProgressRounds']==0 for result in repeated))
+
+    def test_next_after_restart_keeps_pending_task(self):
+        task=self.start()
+        # Each operate call reloads the persisted session from the workspace.
+        for _ in range(5):
+            result=operate('next',self.workspace)
+            self.assertEqual(result['task'],task)
+        self.assertEqual(result['investigationState'],'INVESTIGATING')
 
     def test_evidence_budget_blocks_before_overrun_and_persists_on_restart(self):
         (self.repo/'app.py').write_text('def verify_jwt(token):\n'+'    value = bool(token)\n'*100+'    return value\n')
