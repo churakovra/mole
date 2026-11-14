@@ -54,7 +54,8 @@ output.textContent=JSON.stringify(result); document.body.append(output);
     parser = ResultParser()
     parser.feed(result.stdout)
     if result.returncode != 0 or not parser.result:
-        raise AssertionError("Browser did not complete test: " + result.stderr[-1200:])
+        raise AssertionError(f"Browser did not complete test (exit {result.returncode}): " +
+                             result.stderr[-1200:] + " stdout: " + result.stdout[-400:])
     return json.loads(parser.result)
 
 
