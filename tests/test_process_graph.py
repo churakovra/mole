@@ -223,6 +223,37 @@ class GraphSubmissionTests(unittest.TestCase):
         self.file.write_text(json.dumps(value))
         return operate('submit',self.workspace,input=self.file)
 
+    def test_runtime_handoff_requires_trace_and_passes_delivery_gate(self):
+        from molekit.delivery import assess
+        from molekit.investigations import _knowledge,_manifest,_session
+        self.submit(self.patch)
+        manifest=_manifest(self.workspace);session=_session(self.workspace,manifest);scan=_knowledge(self.workspace,session)
+        model=scan['model'];graph=scan['processGraph']
+        operation_by_id={item['id']:item for item in model['operations']}
+        edge=graph['processHandoffs'][0]
+        runtime_evidence={**model['evidence'][0],'id':'evidence-runtime-handoff',
+            'observation':'A runtime trace records the handoff.','extractor':'test-runtime-trace',
+            'classification':'runtime_trace'}
+        model['evidence'].append(runtime_evidence)
+        model['claims'].append({'id':'claim-runtime-handoff','statement':'The runtime trace records the handoff.',
+            'status':'runtime_verified','evidenceIds':[runtime_evidence['id']],'limitations':[]})
+        edge.update(resolution='observed_runtime',claimIds=['claim-runtime-handoff'],
+            evidenceIds=[runtime_evidence['id']],limitations=[])
+        for process_id in (edge['fromProcessId'],edge['toProcessId']):
+            for operation_id in next(item for item in graph['processes'] if item['id']==process_id)['operationIds']:
+                operation_by_id[operation_id]['evidenceIds'].append(runtime_evidence['id'])
+        validate_process_graph(graph,model)
+        result=assess(session,scan)
+        handoffs=next(item for item in result['requirements'] if item['kind']=='supported_process_handoffs')
+        self.assertEqual(handoffs['status'],'SATISFIED')
+
+        missing_trace=copy.deepcopy(scan)
+        next(item for item in missing_trace['model']['evidence'] if item['id']==runtime_evidence['id'])['classification']='source_code'
+        with self.assertRaises(MoleError): validate_process_graph(missing_trace['processGraph'],missing_trace['model'])
+        missing_runtime_claim=copy.deepcopy(scan)
+        next(item for item in missing_runtime_claim['model']['claims'] if item['id']=='claim-runtime-handoff')['status']='source_observed'
+        with self.assertRaises(MoleError): validate_process_graph(missing_runtime_claim['processGraph'],missing_runtime_claim['model'])
+
     def test_canonical_graph_persists_and_pages_across_restart(self):
         import json
         from molekit.investigations import operate
