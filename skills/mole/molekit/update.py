@@ -222,6 +222,20 @@ def refresh(state, directory):
                 invalidated_semantic.append(entity["id"])
                 reconstruction_scopes.update(state['scan'].get('claimScopes', {}).get(cid)
                                              for cid in entity['claimIds'])
+    # A surviving scenario cannot retain a link to withdrawn interpretation.
+    # Reopen its authoring scope rather than silently erasing authored flow.
+    while True:
+        scene_ids = {scene['id'] for scene in result['semantic']['scenarios']}
+        withdrawn = [scene for scene in result['semantic']['scenarios']
+                     if any(link['targetScenarioId'] not in scene_ids for link in scene.get('links', []))]
+        if not withdrawn:
+            break
+        ids = {scene['id'] for scene in withdrawn}
+        invalidated_semantic.extend(sorted(ids))
+        for scene in withdrawn:
+            reconstruction_scopes.update(state['scan'].get('claimScopes', {}).get(cid) for cid in scene['claimIds'])
+        for collection in (result['semantic'], result['model']):
+            collection['scenarios'] = [scene for scene in collection['scenarios'] if scene['id'] not in ids]
     for task in tasks:
         old = old_tasks.get(task["id"])
         claims = state.get("taskClaims", {}).get(task["id"], [])

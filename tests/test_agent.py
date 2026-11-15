@@ -11,6 +11,24 @@ from molekit.workspace import load, atomic_json
 
 
 class AgentTests(unittest.TestCase):
+    def test_service_orientation_precedes_large_components_and_does_not_duplicate_documents(self):
+        (self.repo / 'README.md').write_text('# Store\nCustomers place orders.\n')
+        (self.repo / 'docs').mkdir()
+        (self.repo / 'docs/ARCHITECTURE.md').write_text('# Flow\nAccept an order, save it and notify fulfillment.\n')
+        (self.repo / 'worker.ts').write_text('export function fulfill() { return true; }\n')
+        separate = Path(self.temp.name) / 'orientation-workspace'
+        start(self.repo, separate, 'standard', 'repository')
+        task = operate('next', separate)['task']
+        self.assertEqual(task['scopeKind'], 'service_orientation')
+        page = operate('inspect', separate, task=task['id'], budget_chars=12000)
+        self.assertEqual({item['path'] for item in page['context']}, {'README.md', 'docs/ARCHITECTURE.md'})
+        self.assertEqual(len(task['operationIds']), 2)
+        state = load(separate)
+        other_docs = [item for item in state['tasks'][1:] if item['kind'] == 'document_review']
+        self.assertFalse(any(set(item['evidenceIds']) & set(task['evidenceIds']) for item in other_docs))
+        self.assertTrue(any(item['kind'] == 'component_review' for item in state['tasks'][1:]))
+        self.assertTrue(any(item['reason'] == 'reduced_coverage_no_ast_adapter' for item in state['scan']['limitations']))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

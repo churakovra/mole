@@ -14,7 +14,7 @@ from molekit.model import empty_model, validate_model
 from molekit.workspace import atomic_json, read_json, read_snapshot
 from molekit.safety import read_source
 
-PARSER_VERSION = "python-ast-v7-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
+PARSER_VERSION = "python-ast-v9-" + str(sys.version_info.major) + "." + str(sys.version_info.minor)
 IGNORED = {".git", ".mole", "node_modules", ".venv", "venv", "dist", "build", "__pycache__"}
 SECRET_NAMES = {"credentials", "credentials.json", "id_rsa", "id_ed25519", ".netrc", ".npmrc"}
 MAX_FILE_BYTES = 1024 * 1024
@@ -267,6 +267,9 @@ def scan(repo, workspace, excluded=(), scope="repository"):
                 _, ev = evidence(record, 1, max(1, len(record["content"].splitlines())), "Text input; agent interpretation required", kind)
                 model["operations"].append({"id": identity("document", path), "kind": "documented_input" if kind != "source_code" else "text_input",
                                              "title": path, "evidenceIds": [ev]})
+                if kind == 'documentation':
+                    model['operations'][-1]['searchTerms'] = [redact(line.lstrip('#').strip())[:300]
+                        for line in record['content'].splitlines() if line.startswith('#')][:100]
                 if kind == "source_code":
                     limitations.append({"path": path, "reason": "reduced_coverage_no_ast_adapter"})
             continue
@@ -318,5 +321,5 @@ def scan(repo, workspace, excluded=(), scope="repository"):
     save(cache_path, facts, workspace, atomic_json)
     validate_model(model)
     index = [{"path": r["path"], "hash": r["hash"]} for r in records]
-    return {"model": model, "parserVersion": PARSER_VERSION, "index": index, "facts": facts, "unresolved": graph["unresolved"], **graph,
+    return {"model": model, "parserVersion": PARSER_VERSION, "indexScope": scope, "index": index, "facts": facts, "unresolved": graph["unresolved"], **graph,
             "limitations": limitations, "stats": {"files": len(index), "parsed": len(facts) - reused, "reused": reused}}

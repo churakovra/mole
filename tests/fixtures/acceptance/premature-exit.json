@@ -1,0 +1,11 @@
+{
+  "id": "historical-service-orientation-premature-exit",
+  "provenance": "Anonymized negative receipt reconstructed from the blueprint; not a fresh-agent transcript",
+  "prompt": "Explain to me how this service works",
+  "requiredDeliverable": "interactive_process_map",
+  "requiredFormats": ["html"],
+  "observedCommands": ["doctor", "start", "next", "inspect"],
+  "deliveredFormats": [],
+  "finalResponseKind": "prose_summary",
+  "expectedOutcome": "user_goal_not_met"
+}

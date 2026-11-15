@@ -127,7 +127,10 @@ def publish(state, directory, root, formats, quality, build, persist, restart=Fa
     root = Path(root).absolute()
     project = digest({'repo': state['manifest']['repo'], 'scope': state['manifest']['scope']})
     quality = {**quality, 'export': 'PASS'}
-    intent = digest({'model': state['scan']['model'], 'quality': quality, 'formats': sorted(formats), 'project': project})
+    intent_data = {'model': state['scan']['model'], 'quality': quality, 'formats': sorted(formats), 'project': project}
+    if 'deliveryIntent' in state:
+        intent_data['deliveryIntent'] = state['deliveryIntent']
+    intent = digest(intent_data)
     with locked(root, create=True):
         pointer, manifest, active = current(root)
         pending = state.get('pendingExport')

@@ -25,6 +25,8 @@ class PackageTests(unittest.TestCase):
                 self.assertTrue(any('/.github/workflows/' in name for name in names))
                 self.assertIn('mole-source/docs/reviews/rc1-static-review-ru.md', names)
                 self.assertIn('mole-source/REVIEW-PROVENANCE.json', names)
+                for plan in SOURCE.parents[1].glob('MOLE-*.md'):
+                    self.assertIn('mole-source/' + plan.name, names)
                 self.assertFalse(any('/.git/' in name or '/artifacts/' in name for name in names))
                 provenance = json.loads(archive.read('mole-source/REVIEW-PROVENANCE.json'))
                 self.assertEqual(provenance['revision'],manifest['revision'])

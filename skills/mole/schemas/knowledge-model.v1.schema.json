@@ -200,11 +200,40 @@
           "sourcePattern": {
             "type": "string"
           },
+          "routeMethod": {
+            "type": "string"
+          },
+          "routePath": {
+            "type": "string"
+          },
+          "searchTerms": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 300
+            }
+          },
           "uncertainty": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "condition": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
           }
         },
         "required": [
@@ -249,6 +278,18 @@
             }
           },
           "condition": {
+            "type": "string"
+          },
+          "claimIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceStatus": {
+            "type": "string"
+          },
+          "semanticKind": {
             "type": "string"
           }
         },
@@ -388,6 +429,73 @@
               ],
               "additionalProperties": false
             }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "targetScenarioId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "targetScenarioId",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "stepTransitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fromStep": {
+                  "type": "integer"
+                },
+                "toStep": {
+                  "type": "integer"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "condition": {
+                  "type": "string"
+                },
+                "claimIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "fromStep",
+                "toStep",
+                "label",
+                "condition",
+                "claimIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "purpose": {
+            "type": "string"
           }
         },
         "required": [

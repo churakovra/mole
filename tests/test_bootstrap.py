@@ -95,6 +95,35 @@ class InstalledSkillTests(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
         self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
 
+    def test_missing_delivery_recipe_is_incomplete_payload(self):
+        (self.installed / "references/delivery-recipes.md").unlink()
+        result = self.run_cli("doctor", "--json")
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PAYLOAD_INCOMPLETE")
+
+    def test_installed_document_links_resolve_within_payload(self):
+        import re
+        for document in self.installed.rglob('*.md'):
+            for target in re.findall(r'\]\(([^)]+)\)', document.read_text(encoding='utf-8')):
+                if target.startswith(('https://', 'http://', '#')):
+                    continue
+                destination = (document.parent / target.split('#')[0]).resolve()
+                self.assertTrue(destination.is_relative_to(self.installed.resolve()), target)
+                self.assertTrue(destination.is_file(), str(document) + ': ' + target)
+
+    def test_missing_v2_payload_parts_are_detected(self):
+        for relative in ('molekit/requests.py','molekit/investigations.py','schemas/analysis-request.v2.schema.json',
+                         'schemas/deliverable-contract.v1.schema.json','schemas/investigation-state.v2.schema.json'):
+            path = self.installed/relative
+            content = path.read_bytes()
+            path.unlink()
+            try:
+                result = self.run_cli('doctor','--json')
+                self.assertEqual(result.returncode,3,result.stdout)
+                self.assertEqual(json.loads(result.stdout)['error']['code'],'PAYLOAD_INCOMPLETE')
+            finally:
+                path.write_bytes(content)
+
     def test_installed_scan_offline_without_target_execution(self):
         (self.cwd / "app.py").write_text("raise RuntimeError('target code executed')\ndef f(): return 1\n")
         workspace = self.root / "workspace"
@@ -120,6 +149,28 @@ class InstalledSkillTests(unittest.TestCase):
         self.assertTrue((output / "README.md").is_file())
         self.assertTrue((output / "explorer.html").is_file())
         self.assertTrue((output / "confluence/workflows.drawio").is_file())
+
+    def test_installed_v2_admission_offline_without_target_execution(self):
+        source = self.cwd/'app.py'
+        source.write_text("raise RuntimeError('target code executed')\ndef f(): return 1\n")
+        before = {path.name:path.read_bytes() for path in self.cwd.iterdir()}
+        request = self.root/'request.json'
+        request.write_text(json.dumps({'requestVersion':'2.0','requestId':'offline-question',
+            'question':'Explain f','intent':['explain'],'focus':['f'],
+            'deliverable':{'contractVersion':'1.0','deliverableType':'chat_answer',
+            'requirements':[{'id':'answer','kind':'question_answered','required':True}],'formats':[]}}))
+        workspace = self.root/'v2-workspace'
+        result = self.run_cli('begin','--repo',str(self.cwd),'--workspace',str(workspace),'--request',str(request),'--json')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(json.loads(result.stdout)['protocolVersion'],'2.0')
+        result = self.run_cli('next','--workspace',str(workspace),'--json')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertNotEqual(payload['investigationState'],'READY_TO_PRESENT')
+        result = self.run_cli('inspect','--workspace',str(workspace),'--task',payload['task']['id'],'--json')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertTrue(json.loads(result.stdout)['context'])
+        self.assertEqual(before,{path.name:path.read_bytes() for path in self.cwd.iterdir()})
 
     def test_invalid_requests(self):
         for args in [(), ("start",), ("doctor", "--repo", "."),

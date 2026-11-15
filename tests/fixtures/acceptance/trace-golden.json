@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "purpose": "Predeclared mechanical retrieval expectations; not measured results or semantic runtime proof",
+  "cases": [
+    {
+      "fixture": "cross-file-workflow",
+      "query": {"text": "POST /orders", "direction": "forward"},
+      "answerScope": "api.py",
+      "indexScope": "repository",
+      "requiredPaths": ["api.py", "service.py", "repository.py", "publisher.py", "worker.py"],
+      "requiredKinds": ["http_entry", "db_write", "publish", "acknowledgement"],
+      "allowedUnknowns": ["Undefined publisher message", "Startup and broker delivery unverified"],
+      "forbiddenClaims": ["runtime_verified", "exactly-once delivery"]
+    },
+    {
+      "fixture": "game-settlement",
+      "query": {"text": "POST /games/complete", "direction": "forward"},
+      "answerScope": "completion.py",
+      "indexScope": "repository",
+      "requiredPaths": ["completion.py", "settlement.py", "wallet.py"],
+      "forbiddenSymbols": ["wallet.purchase"],
+      "allowedUnknowns": ["External TypeScript verifier implementation", "Duplicate handling", "Cross-service atomicity"]
+    },
+    {
+      "fixture": "ambiguous-symbols",
+      "query": {"focusSymbols": ["process_order"], "direction": "both"},
+      "requiredAmbiguousSymbols": ["orders.process_order", "refunds.process_order"],
+      "forbiddenOutcome": "Silently select one equally matching independent declaration"
+    }
+  ]
+}

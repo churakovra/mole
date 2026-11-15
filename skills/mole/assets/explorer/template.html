@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>MOLE Process explorer</title>
+<style>$style</style>
+</head>
+<body>
+<header class="app-header"><strong>mole</strong><span>Process explorer</span><details class="workspace-tools"><summary>Workspace</summary><div><button id="export-edits" type="button">Export edits</button><button id="import-edits" type="button">Import edits</button></div></details></header>
+<main class="workspace">
+<aside class="navigation"><label for="search">Find a process</label><input id="search" type="search" placeholder="Search processes"><nav id="tree" aria-label="Process navigation"></nav></aside>
+<section class="work" aria-label="Process workspace">
+<div class="process-header"><div class="location"><button id="back" type="button">Back</button><nav id="breadcrumbs" aria-label="Current process"></nav></div><h1 id="title">Process explorer</h1></div>
+<div class="canvas-toolbar"><span id="view-kind">Process flow</span><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out" type="button">−</button><output id="zoom-label" aria-live="polite">100%</output><button id="zoom-in" aria-label="Zoom in" type="button">+</button><button id="fit" type="button">Fit</button></div></div>
+<div id="viewport" tabindex="0" aria-label="Scrollable workflow diagram"><svg id="diagram" role="group" aria-label="Workflow diagram"></svg></div>
+<div class="coverage"><details id="coverage-details"><summary id="coverage-label">$coverage_label</summary><p id="warning" role="status">$coverage_notice</p></details></div>
+</section>
+<aside class="inspector" aria-label="Process and step information"><section id="details" tabindex="-1" aria-label="Selection details"><h2>Process details</h2><p>Select a step to read its explanation.</p></section></aside>
+</main>
+<script id="mole-model" type="application/json">$model</script>
+<script id="mole-config" type="application/json">$config</script>
+<script id="mole-layouts" type="application/json">$layouts</script>
+<script>$blocks</script>
+<script>$overrides</script>
+<script>$script</script>
+</body>
+</html>

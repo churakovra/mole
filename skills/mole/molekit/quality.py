@@ -24,6 +24,11 @@ def assess(state):
     scenes = scan.get('semantic', {}).get('scenarios', [])
     if not scenes:
         reasons.append('No authored workflow/scenario interpretation')
+    if len(scenes) > 1 and not any(scene.get('links') for scene in scenes):
+        reasons.append('No inter-process handoffs authored; overview remains a process catalog')
+    for scene in scenes:
+        if len(scene.get('steps', [])) > 1 and not scene.get('stepTransitions'):
+            reasons.append(scene['id'] + ': no explicit step transitions; paths remain unconnected')
     scopes = scan.get('claimScopes', {})
     covered = {scopes[cid] for scene in scenes for cid in scene['claimIds'] if cid in scopes}
     uncovered = [task for task in state['tasks'] if task['kind'] in {'workflow_review', 'component_review', 'document_review'}
@@ -35,6 +40,15 @@ def assess(state):
                      or any(not path.get('operationIds') for path in scene.get('failurePaths', [])) for scene in scenes)
     if incomplete:
         reasons.append('Authored scope/outcome/failure coverage remains incomplete')
+        for scene in scenes:
+            missing = [key for key in ('actors', 'preconditions', 'steps', 'outcomes', 'failurePaths') if not scene.get(key)]
+            gaps = (['missing ' + ', '.join(missing)] if missing else [])
+            if scene.get('unknowns'):
+                gaps.append('explicit unknown boundaries: ' + str(len(scene['unknowns'])))
+            if any(not path.get('operationIds') for path in scene.get('failurePaths', [])):
+                gaps.append('failure paths without operation evidence')
+            if gaps:
+                reasons.append(scene['id'] + ': ' + '; '.join(gaps))
     if uncertain:
         reasons.append('Unknown or contradicted claims: ' + str(uncertain))
     if unresolved:

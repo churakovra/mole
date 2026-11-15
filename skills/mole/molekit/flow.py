@@ -153,6 +153,9 @@ def connect(model, facts, symbols, records, evidence):
             operation = {"id": op_id, "kind": "call_candidate", "title": canonical,
                          "evidenceIds": [ev], "sourceOrder": call["line"] * 4096 + call["column"],
                          "control": context, "sourcePattern": "AST call site"}
+            if call.get('declaration'):
+                operation['sourcePattern'] = 'AST declaration expression; not a callable invocation body'
+                operation['uncertainty'] = ['Definition-time evaluation candidate; decorated callable execution and lifecycle unverified']
             if owner:
                 operation["ownerId"] = owner
             fact_operations[(path, "call:" + str(call_index))] = op_id

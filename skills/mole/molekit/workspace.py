@@ -39,7 +39,7 @@ def check_complexity(value):
             pending.extend((child, depth + 1) for child in item)
 
 
-def read_json(path):
+def read_json(path, max_bytes=MAX_JSON_BYTES):
     path = Path(path)
     if path.is_symlink():
         raise MoleError("UNSAFE_PATH", "JSON files must not be symlinks.")
@@ -48,8 +48,8 @@ def read_json(path):
         with os.fdopen(os.open(path, flags), "rb") as stream:
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise MoleError("UNSAFE_PATH", "JSON input must be a regular file.")
-            raw = stream.read(MAX_JSON_BYTES + 1)
-        if len(raw) > MAX_JSON_BYTES:
+            raw = stream.read(max_bytes + 1)
+        if len(raw) > max_bytes:
             raise MoleError("INVALID_JSON", "JSON exceeds size limit.")
         value = json.loads(raw, object_pairs_hook=unique_object, parse_constant=invalid_constant)
         check_complexity(value)

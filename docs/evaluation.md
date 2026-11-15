@@ -1,5 +1,9 @@
 # Evaluation method and observed scope
 
+This page describes the repository-level evaluation tools and previously
+measured v1 scope. V2 delivery and user testing are described in the
+[goal completion guide](v2-delivery.md) and [UX evaluation handoff](ux-evaluation.md).
+
 Run `python3 tools/evaluate.py --output /tmp/mole-evaluation.json` without a
 network connection or third-party Python packages. The checked-in result records
 the actual environment and measurements from this development session.

@@ -5,6 +5,7 @@ permissions:
 jobs:
   bootstrap:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ['3.11', '3.14']
@@ -15,7 +16,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python tools/evaluate.py --output "${{ runner.temp }}/mole-evaluation.json"
       - run: git diff --check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-${{ matrix.os }}-${{ matrix.python }}
+          path: ${{ runner.temp }}/mole-evaluation.json
   browser:
     runs-on: ubuntu-latest
     env:

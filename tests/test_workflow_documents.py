@@ -54,6 +54,13 @@ class WorkflowDocumentTests(unittest.TestCase):
                                       'outcome': 'Rollback is attempted by the matching handler; other exception behavior is unknown', 'claimIds': ['claim-order']}],
                     'outcomes': ['Source contains storage and publication/consumer candidates'],
                     'unknowns': ['Runtime routing, delivery and registration startup remain unverified']} ]}
+            labels = ['Accept order', 'Process order', 'Save order', 'Record order',
+                      'Commit order', 'Prepare notification', 'Publish notification', 'Handle notification']
+            for step, label in zip(patch['scenarios'][0]['steps'], labels):
+                step['description'] = label
+            patch['scenarios'][0]['stepTransitions'] = [
+                {'fromStep': i, 'toStep': i + 1, 'label': 'Continue order processing', 'condition': '', 'claimIds': ['claim-order']}
+                for i in range(len(labels) - 1)]
             path = Path(tmp) / 'patch.json'
             path.write_text(json.dumps(patch))
             operate('submit', workspace, input=path)
@@ -61,18 +68,64 @@ class WorkflowDocumentTests(unittest.TestCase):
             document = (resolve_output(output) / 'processes/semantic-order.md').read_text()
             for filename in ('api.py', 'service.py', 'repository.py', 'publisher.py', 'worker.py'):
                 self.assertIn(filename, document)
-            self.assertIn('1. api.create', document)
+            self.assertIn('1. Accept order', document)
             self.assertIn('Actors', document)
             self.assertIn('ValueError', document)
             self.assertIn('rollback', document)
             self.assertIn('unverified', document)
-            model = load(workspace)['scan']['model']
+            state = load(workspace)
+            model = state['scan']['model']
             root = model['diagramViews'][0]
             self.assertNotIn('Static trace:', json.dumps(root))
             self.assertTrue(any(node['label'] == 'Order processing' for node in root['nodes']))
+            self.assertFalse(any(node['label'].startswith(('Workflow candidate:', 'Component review:')) for node in root['nodes']))
             views = {view['id']: view for view in model['diagramViews']}
             business = views[next(node['childViewId'] for node in root['nodes'] if node['label'] == 'Order processing')]
+            self.assertEqual([node['label'] for node in business['nodes']][:len(labels)], labels)
             self.assertGreaterEqual(len(business['edgeIds']), 3)
-            module = views[business['childRefs'][0]]
-            self.assertTrue(module['childRefs'])
+            self.assertTrue(all(node.get('childViewId') in views for node in business['nodes']))
+            self.assertTrue(any('rollback' in node['label'].lower() for node in business['nodes']))
+            # Regeneration must not accumulate generated business nodes or edges.
+            first_model = json.dumps(model, sort_keys=True)
+            compose(state['scan'])
+            self.assertEqual(first_model, json.dumps(state['scan']['model'], sort_keys=True))
+            conditional_state = load(workspace)
+            conditional_scene = conditional_state['scan']['semantic']['scenarios'][0]
+            conditional_scene.pop('stepTransitions')
+            conditional_scene['steps'][1]['condition'] = 'If approved'
+            conditional_scene['steps'][2]['condition'] = 'If rejected'
+            conditional_model = compose(conditional_state['scan'])
+            conditional_view = next(view for view in conditional_model['diagramViews'] if view['id'] == business['id'])
+            conditional_nodes = {node['id'] for node in conditional_view['nodes']
+                                 if 'If approved' in node['label'] or 'If rejected' in node['label']}
+            self.assertFalse(any(edge['source'] in conditional_nodes or edge['target'] in conditional_nodes
+                                 for edge in conditional_model['relationships'] if edge['id'] in conditional_view['edgeIds']))
+            from unittest.mock import patch as mock_patch
+            with mock_patch('molekit.knowledge.MAX_VIEWS', 4):
+                bounded = compose(load(workspace)['scan'])
+            bounded_views = {view['id']: view for view in bounded['diagramViews']}
+            process_node = next(node for node in bounded['diagramViews'][0]['nodes'] if node['label'] == 'Order processing')
+            self.assertIn(process_node['childViewId'], bounded_views)
+            self.assertEqual(bounded_views[process_node['childViewId']]['nodes'][0]['label'], 'Accept order')
+            from test_html import BROWSER, browser_test
+            from molekit.html import render
+            if Path(BROWSER).is_file():
+                result = browser_test(render(model, partial=True), '''
+const rootTitle=document.querySelector('#title').textContent;
+const process=[...document.querySelectorAll('.node')].find(n=>n.textContent.includes('Order processing'));
+process.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+check(document.querySelector('#details').textContent.includes('HTTP order request'),'process explanation missing');
+process.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));
+check(document.querySelector('#diagram').textContent.includes('Accept order'),'business steps missing');
+const step=[...document.querySelectorAll('.node')].find(n=>n.textContent.includes('Accept order'));
+step.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+check(document.querySelector('#open-details'),'no subprocess control');
+document.querySelector('#open-details').click();
+check(document.querySelector('#title').textContent!=='Order processing','subprocess did not open');
+document.querySelector('#back').click();
+check(document.querySelector('#title').textContent==='Order processing','back lost business process');
+document.querySelector('#back').click();
+check(document.querySelector('#title').textContent===rootTitle,'back lost overview');
+''', tmp)
+                self.assertTrue(result['ok'], result)
             self.assertIn('publisher.py', (resolve_output(output) / 'architecture.md').read_text())

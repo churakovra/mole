@@ -42,6 +42,8 @@ def generate(output, replace_generated=False):
                     'preconditions':['Configured session and broker are assumptions, not verified deployment facts.'],
                     'operationIds':task['operationIds'],'claimIds':[claim],
                     'steps':[{'operationId':operations[title],'description':title,'claimIds':[claim],'condition':''} for title in titles],
+                    'stepTransitions':[{'fromStep':i,'toStep':i+1,'label':'Order processing path',
+                        'condition':'Static interpretation; execution unverified','claimIds':[claim]} for i in range(len(titles)-1)],
                     'failurePaths':[{'condition':'ValueError in Store.save','operationIds':[operations['sqlalchemy.orm.Session.rollback']],
                         'outcome':'Matching handler attempts rollback; other failures remain unknown.','claimIds':[claim]}],
                     'stateEffects':['Static storage and publication candidates; neither transaction success nor message delivery was executed.'],

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mole:deliverable-contract:v1",
+  "type": "object",
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "enum": [
+        "1.0"
+      ]
+    },
+    "deliverableType": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "enum": [
+        "chat_answer",
+        "focused_map",
+        "interactive_process_map",
+        "investigation_report",
+        "explicit_artifacts"
+      ]
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "enum": [
+              "question_answered",
+              "precise_location",
+              "scope_disclosed",
+              "trace_path",
+              "hypotheses",
+              "business_overview",
+              "supported_process_handoffs",
+              "subprocess_navigation",
+              "human_explanations",
+              "source_traceability",
+              "requested_artifacts"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "required"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true
+    },
+    "formats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "enum": [
+          "html",
+          "markdown",
+          "drawio",
+          "mermaid"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 4,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "contractVersion",
+    "deliverableType",
+    "requirements",
+    "formats"
+  ],
+  "additionalProperties": false
+}
