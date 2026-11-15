@@ -3,8 +3,6 @@ name: mole
 description: Investigate a specific repository question, explain Python code, trace workflows with evidence, or build interactive process maps for service-level explanations. Python-first static analysis; other languages have reduced coverage.
 license: Apache-2.0 (see LICENSE)
 compatibility: Requires a shell and Python 3.11+; bundled engine runs offline without third-party Python packages.
-metadata:
-  version: "0.1.0"
 ---
 
 # MOLE

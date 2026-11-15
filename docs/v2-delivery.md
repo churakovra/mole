@@ -56,5 +56,4 @@ remain enabled: performance has not been traded for stale-proof risk.
 
 Machine checks verify structure, provenance and files, not semantic truth or
 human usefulness. Model self-review is not an independent human grade. Browser
-usability and business correctness still need the test handoff described in
-[UX evaluation](ux-evaluation.md).
+usability and business correctness require independent human acceptance.

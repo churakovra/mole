@@ -28,7 +28,19 @@ def package(output, source=SOURCE):
             raise ValueError("Skill payload must not contain symlinks")
         if not path.is_file() or "__pycache__" in path.parts or path.suffix == ".pyc" or path.name == ".DS_Store":
             continue
-        files.append((path.relative_to(source).as_posix(), path.read_bytes()))
+        name = path.relative_to(source).as_posix()
+        data = path.read_bytes()
+        if name == "SKILL.md":
+            text = data.decode("utf-8")
+            frontmatter_end = text.find("\n---\n")
+            if not text.startswith("---\n") or frontmatter_end < 0:
+                raise ValueError("SKILL.md must start with YAML frontmatter")
+            frontmatter = text[:frontmatter_end]
+            if "\nmetadata:" in frontmatter:
+                raise ValueError("SKILL.md source must not duplicate the canonical version")
+            text = text[:frontmatter_end] + f'\nmetadata:\n  version: "{version}"' + text[frontmatter_end:]
+            data = text.encode("utf-8")
+        files.append((name, data))
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
         for name, data in files:

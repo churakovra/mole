@@ -56,4 +56,5 @@ Headings improve search without asserting semantic truth.
 synthetic star, including the model in peak Python allocation. It measures
 response bounds, not semantic recall, real-source accuracy, CLI latency or token
 savings. Full lexical/adjacency indexing still uses memory proportional to the
-graph. Actual versioned measurements are retained with implementation evidence.
+graph. The benchmark writes measurements only to the output path supplied by
+the caller; generated result files are not checked into this repository.

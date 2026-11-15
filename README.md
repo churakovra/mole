@@ -6,8 +6,6 @@ MOLE is a self-contained Agent Skill (`$mole`) with a bundled Python engine,
 `molekit`. It inventories source, asks the agent bounded evidence-backed questions,
 and compiles a shared knowledge model into Markdown, offline HTML and draw.io.
 
-**Current version: 0.1.0, an unreleased review candidate.** Implementation is
-available locally; [release acceptance gaps](docs/release-readiness.md) remain.
 Static candidates are not verified runtime behavior.
 
 ## Install
@@ -55,8 +53,8 @@ and desired scope. The agent follows the bundled [protocol](skills/mole/referenc
 
 Examples: `$mole Where is JWT checked?`, `$mole Explain verify_jwt`,
 `$mole Trace POST /complete`, `$mole Investigate duplicate rewards`, and
-`$mole Explain to me how this service works`. See [v2 delivery](docs/v2-delivery.md),
-the [CLI reference](docs/cli-reference.md), and the [test handoff](docs/ux-evaluation.md).
+`$mole Explain to me how this service works`. See the
+[CLI reference](docs/cli-reference.md) and the [request workflow](docs/v2-delivery.md).
 The CLI reference marks the legacy v1 `start/finish` flow separately.
 
 Scope can also be a repository-relative file or directory. The engine owns
@@ -118,10 +116,7 @@ python3 tools/package_source.py --output /tmp/mole-source-review.zip
 The tests exercise an isolated copy of only the skill, complete CLI workflow
 with network/process denial, persistence/update failures, source/JSON/security
 boundaries, XML/XSD (when configured), and actual Chrome interactions/geometry.
-See [evaluation evidence](docs/evaluation.md), [branch status](DEVELOPMENT-STATUS.md),
-and [contribution guidance](CONTRIBUTING.md). The original development guide,
-implementation plan and PR backlog remain unchanged references. The v2 workflow
-and test handoff are documented in [delivery](docs/v2-delivery.md) and
-[UX evaluation](docs/ux-evaluation.md).
+See [contribution guidance](CONTRIBUTING.md) for development commands and
+[security boundaries](docs/security-model.md) for analysis limitations.
 
 Licensed under [Apache-2.0](LICENSE). The same license is included in the skill payload.

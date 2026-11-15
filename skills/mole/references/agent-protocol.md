@@ -154,7 +154,7 @@ Unpublished `.stage-*` directories are not active bundles and may be removed
 manually after preserving any edits. JSON quality/loss sidecars describe limits.
 
 
-## Bounded control flow and deferred scopes (0.1.0)
+## Bounded control flow and deferred scopes
 
 Parser v9 reconstructs argument evaluation, branch joins, loop back/exit paths,
 and break/continue/return/raise boundaries from source AST. These are static

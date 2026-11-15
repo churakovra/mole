@@ -9,8 +9,11 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIXES = {'.github', 'skills', 'tests', 'tools', 'docs'}
-TOP_FILES = {'.gitignore', 'LICENSE', 'README.md', 'CONTRIBUTING.md', 'DEVELOPMENT-STATUS.md', 'CHANGELOG.md', 'SECURITY.md'}
-PLANNING_SUFFIXES = ('-DEVELOPMENT-GUIDE.md', '-IMPLEMENTATION-PLAN.md', '-PR-BACKLOG.md')
+TOP_FILES = {'.gitignore', 'LICENSE', 'README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'SECURITY.md'}
+PRIVATE_DOCS = {
+    'docs/editor-results.json', 'docs/evaluation-results.json', 'docs/evaluation.md',
+    'docs/release-readiness.md', 'docs/scale-results.json', 'docs/ux-evaluation.md',
+}
 
 
 def git(*args, root=ROOT):
@@ -25,8 +28,9 @@ def package_source(output, root=ROOT):
     files = []
     for name in sorted(filter(None, paths)):
         relative = Path(name)
-        planning = len(relative.parts) == 1 and name.startswith('MOLE-') and name.endswith(PLANNING_SUFFIXES)
-        if relative.parts[0] not in PREFIXES and name not in TOP_FILES and not planning:
+        if ((relative.parts[0] not in PREFIXES and name not in TOP_FILES)
+                or name.startswith('MOLE-') or name == 'DEVELOPMENT-STATUS.md'
+                or name in PRIVATE_DOCS or name.startswith('docs/reviews/')):
             continue
         if any(part in {'__pycache__', '.git', '.objects', '.diagnostics', '.mole-generations'} for part in relative.parts):
             continue

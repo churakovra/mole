@@ -11,6 +11,8 @@ import unittest
 
 
 SKILL = Path(__file__).resolve().parents[1] / "skills" / "mole"
+sys.path.insert(0, str(SKILL))
+from molekit import __version__
 
 # Installed only in the subprocess. Deny network and child processes, and ensure
 # the actual engine import resolves inside the copied payload.
@@ -75,8 +77,8 @@ class InstalledSkillTests(unittest.TestCase):
                 self.assertTrue(result.stdout.strip())
                 self.assertEqual(result.stderr, "")
 
-    def test_first_release_version(self):
-        self.assertEqual(self.run_cli("--version").stdout.strip(), "0.1.0")
+    def test_cli_reports_canonical_version(self):
+        self.assertEqual(self.run_cli("--version").stdout.strip(), __version__)
 
     def test_human_doctor(self):
         result = self.run_cli("doctor")

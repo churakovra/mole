@@ -35,6 +35,5 @@ Mermaid labels use numeric entities and contain no click handlers. Browser
 overrides are presentation-only and do not rewrite the canonical model.
 
 These controls do not prove semantic truth, complete branch coverage, runtime
-reachability, broker guarantees, or external viewer compatibility. Known release
-evidence gaps are maintained in DEVELOPMENT-STATUS.md. A configured CI job is
-not evidence that its OS/runtime checks have run.
+reachability, broker guarantees, or external viewer compatibility. A configured
+CI job is not evidence that its OS/runtime checks have run.

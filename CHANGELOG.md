@@ -1,24 +1,23 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.2.1
 
-- Goal-bound v2 investigations, bounded retrieval and adaptive evidence loop.
-- Canonical process graph, source-bound answer completion and process Explorer.
-- Fresh follow-up knowledge reuse with conservative incremental invalidation.
-- Installed-payload acceptance harness and explicit test handoff; no stable release.
+- Keep the engine as the canonical version source and generate packaged skill metadata from it.
+- Exclude obsolete planning, review and evaluation artifacts from source archives.
 
-- Correct method lexical scope and nested argument evaluation order.
-- Reconstruct conditional joins and loop/early-exit candidates; report unsupported control regions.
-- Expose omitted workflow scope through bounded deferred metadata and quality limitations.
-- Refresh parser caches and semantic review for the changed extraction contract.
-- First release version aligned to 0.1.0; prior RC labels are historical review identifiers.
-- Self-contained `mole` skill with bundled stdlib-only Python `molekit`.
-- Versioned JSON CLI, persistent atomic sessions, locks, resume and bounded tasks.
-- Source provenance/SKM validation, Python AST inventory/cache and detected-framework candidates.
-- Revision-bound semantic patches, bounded redacted inspection, selective incremental updates.
-- Markdown with authored-note preservation, offline explorer with navigation/zoom/pan/editing.
-- Multipage draw.io and optional lossy Mermaid from the same model.
-- Reproducible skill archive tooling, isolated installation tests, CI definitions and evaluation report.
+## 0.2.0
 
-Remaining acceptance gaps are listed in [release readiness](docs/release-readiness.md).
-No final 0.1.0 tag or release has been published.
+- Add goal-bound investigations, bounded retrieval and an adaptive evidence loop.
+- Add canonical process graphs, source-bound answers and the process Explorer.
+- Reuse fresh investigation knowledge for follow-ups with conservative invalidation.
+- Add installed-payload acceptance workflows and explicit human handoff guidance.
+
+## 0.1.0
+
+- Establish a self-contained `mole` skill with a bundled standard-library Python engine.
+- Add a versioned JSON CLI, persistent atomic sessions, locks, resume and bounded tasks.
+- Add source provenance, Python AST inventory/cache and detected-framework candidates.
+- Add revision-bound semantic patches, bounded redacted inspection and selective updates.
+- Add Markdown with authored-note preservation, an offline explorer, multipage draw.io and optional Mermaid exports.
+- Improve method scope, argument order, branch/loop flow, deferred-scope reporting and parser cache refresh.
+- Add reproducible skill packaging, isolated installation tests and CI definitions.
