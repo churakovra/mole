@@ -5,7 +5,7 @@ const os = require("node:os");
 const {spawn} = require("node:child_process");
 const {pathToFileURL} = require("node:url");
 const [browser, directory, file, width, screenshot] = process.argv.slice(2);
-const harnessDeadline = Date.now() + 22000;
+const harnessDeadline = Date.now() + 18000;
 const remainingMs = () => Math.max(0,harnessDeadline-Date.now());
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function bounded(promise,milliseconds,label) {

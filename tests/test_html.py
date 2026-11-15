@@ -2,6 +2,8 @@ from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -57,6 +59,26 @@ output.textContent=JSON.stringify(result); document.body.append(output);
         raise AssertionError(f"Browser did not complete test (exit {result.returncode}): " +
                              result.stderr[-1200:] + " stdout: " + result.stdout[-400:])
     return json.loads(parser.result)
+
+
+class BrowserHarnessTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix" and shutil.which("node"), "Node and a POSIX shell are required for the harness test")
+    def test_startup_failure_retries_once_and_cleans_unique_profiles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); browser=root/"fake-browser"; log=root/"starts.log"
+            browser.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$MOLE_FAKE_BROWSER_LOG"\nexit 23\n',encoding="utf-8")
+            browser.chmod(0o755)
+            page=root/"page.html";page.write_text("<html><body></body></html>",encoding="utf-8")
+            env={**os.environ,"MOLE_FAKE_BROWSER_LOG":str(log)}
+            result=subprocess.run(["node",str(Path(__file__).with_name("browser_runner.js")),str(browser),
+                str(root),str(page),"1280",""],capture_output=True,text=True,timeout=10,env=env)
+            self.assertEqual(result.returncode,1)
+            self.assertEqual(result.stderr.count("Chrome startup failed; retrying once"),1)
+            self.assertIn("code 23",result.stderr)
+            profiles=re.findall(r"--user-data-dir=([^ ]+)",log.read_text(encoding="utf-8"))
+            self.assertEqual(len(profiles),2)
+            self.assertEqual(len(set(profiles)),2)
+            self.assertTrue(all(not Path(profile).exists() for profile in profiles))
 
 
 class HtmlTests(unittest.TestCase):
